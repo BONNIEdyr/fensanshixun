@@ -389,6 +389,11 @@
               <FilePath>..\APP\main.c</FilePath>
             </File>
             <File>
+              <FileName>config.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\APP\config.h</FilePath>
+            </File>
+            <File>
               <FileName>stm32f10x_conf.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\APP\stm32f10x_conf.h</FilePath>

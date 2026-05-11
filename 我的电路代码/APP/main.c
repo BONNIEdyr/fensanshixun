@@ -4,15 +4,9 @@
 #include "Emm_V5.h"
 #include "server.h"
 #include "ps2.h"
+#include "config.h"
 
-#define JOYSTICK_CENTER        128
-#define JOYSTICK_DEAD_ZONE      12
-#define MOTOR_MAX_RPM         1000
-#define MOTOR_ACC               10
-
-#define MOTOR_LEFT_FORWARD_DIR   0
-#define MOTOR_RIGHT_FORWARD_DIR  1
-
+/* 将PS2摇杆的原始值转换为电机目标转速。reverse用于修正摇杆方向。 */
 static int16_t PS2_AxisToSpeed(uint8_t value, uint8_t reverse)
 {
 	int16_t axis;
@@ -34,6 +28,7 @@ static int16_t PS2_AxisToSpeed(uint8_t value, uint8_t reverse)
 	return (int16_t)((axis * MOTOR_MAX_RPM) / 127);
 }
 
+/* 限制电机速度，防止超过配置的最大转速。 */
 static int16_t LimitMotorSpeed(int16_t speed)
 {
 	if(speed > MOTOR_MAX_RPM)
@@ -49,6 +44,7 @@ static int16_t LimitMotorSpeed(int16_t speed)
 	return speed;
 }
 
+/* 按带符号速度控制单个电机，正负号决定实际转向。 */
 static void Motor_SetSignedSpeed(uint8_t addr, uint8_t forwardDir, int16_t speed)
 {
 	uint8_t dir = forwardDir;
@@ -64,39 +60,39 @@ static void Motor_SetSignedSpeed(uint8_t addr, uint8_t forwardDir, int16_t speed
 	Emm_V5_Vel_Control(addr, dir, vel, MOTOR_ACC, 1);
 }
 
-static void Motor_AllStop(const uint8_t motorAddr[4])
+/* 停止全部电机，并发送同步执行命令。 */
+static void Motor_AllStop(const uint8_t motorAddr[MOTOR_COUNT])
 {
 	uint8_t i;
 
-	for(i = 0; i < 4; i++)
+	for(i = 0; i < MOTOR_COUNT; i++)
 	{
 		Emm_V5_Stop_Now(motorAddr[i], 1);
-		delay_ms(5);
+		delay_ms(MOTOR_CMD_DELAY_MS);
 	}
 
 	Emm_V5_Synchronous_motion(0);
 }
 
-static void AllStop(const uint8_t motorAddr[4])
+/* 紧急停止：同时停止电机和舵机。 */
+static void AllStop(const uint8_t motorAddr[MOTOR_COUNT])
 {
 	Motor_AllStop(motorAddr);
 	Servo_All_Stop();
 }
 
-/**********************************************************
-***	Emm_V5.0�����ջ���������
-***	��д���ߣ�ZHANGDATOU
-***	����֧�֣��Ŵ�ͷ�ջ��ŷ�
-***	�Ա����̣�https://zhangdatou.taobao.com
-***	CSDN���ͣ�http s://blog.csdn.net/zhangdatou666
-***	qq����Ⱥ��262438510
-**********************************************************/
-
 /**
-	*	@brief		MAIN����
-	*	@param		��
-	*	@retval		��
-	*/
+ * @brief  主程序入口
+ * @param  无
+ * @retval 无
+ *
+ * 控制逻辑：
+ * 1. 初始化串口、电机、舵机PWM和PS2手柄。
+ * 2. 按START键进入手柄控制模式。
+ * 3. 左摇杆上下控制前进/后退，右摇杆左右控制转向。
+ * 4. 同时按R1和R2执行急停并退出手柄控制模式。
+ * 5. 同时按L1和L2启动舵机正转。
+ */
 int main(void)
 {
 	uint8_t i = 0;
@@ -106,54 +102,49 @@ int main(void)
 	int16_t rotateSpeed = 0;
 	int16_t leftSpeed = 0;
 	int16_t rightSpeed = 0;
-	const uint8_t motorAddr[4] = {1, 2, 3, 4};
+	const uint8_t motorAddr[MOTOR_COUNT] = {MOTOR_ADDR_1, MOTOR_ADDR_2, MOTOR_ADDR_3, MOTOR_ADDR_4};
 	PS2_JoystickTypeDef joystick;
 
-/**********************************************************
-***	��ʼ����������
-**********************************************************/
+	/* 初始化板级资源、舵机PWM和PS2手柄接口。 */
 	board_init();
 	TIM8_PWM_Init();
 	PS2_Init();
 
-	for(i = 0; i < 4; i++)
+	/* 上电后先让所有电机和舵机保持停止状态。 */
+	for(i = 0; i < MOTOR_COUNT; i++)
 	{
 		Emm_V5_Stop_Now(motorAddr[i], 0);
-		delay_ms(5);
+		delay_ms(MOTOR_CMD_DELAY_MS);
 	}
 	Servo_All_Stop();
 
-/**********************************************************
-***	�ϵ���ʱ2��ȴ�Emm_V5.0�ջ���ʼ�����?
-**********************************************************/	
-	delay_ms(2000);
+	/* 等待电机驱动器完成上电初始化。 */
+	delay_ms(SYSTEM_START_DELAY_MS);
 
-/**********************************************************
-***	�ٶ�ģʽ���ĵ��ͬ������������CW���ٶ�1000RPM�����ٶ�10
-**********************************************************/
-	for(i = 0; i < 4; i++)
+	/* 初始化完成后再次停止全部执行机构，确保进入主循环前状态安全。 */
+	for(i = 0; i < MOTOR_COUNT; i++)
 	{
 		Emm_V5_Stop_Now(motorAddr[i], 0);
-		delay_ms(5);
+		delay_ms(MOTOR_CMD_DELAY_MS);
 	}
 	Servo_All_Stop();
 
-/**********************************************************
-***	WHILEѭ��
-**********************************************************/	
+	/* 主循环：持续读取手柄输入并输出电机、舵机控制命令。 */
 	while(1)
 	{
 		PS2_ScanKey(&joystick);
 
+		/* R1+R2：急停，并退出手柄控制模式。 */
 		if((joystick.btn2 & (PS2_BTN_R1 | PS2_BTN_R2)) == (PS2_BTN_R1 | PS2_BTN_R2))
 		{
 			AllStop(motorAddr);
 			ps2ControlEnabled = 0;
 			servoRunning = 0;
-			delay_ms(20);
+			delay_ms(MAIN_LOOP_DELAY_MS);
 			continue;
 		}
 
+		/* 未进入控制模式时保持电机停止；按START后允许手柄控制。 */
 		if(ps2ControlEnabled == 0)
 		{
 			Motor_AllStop(motorAddr);
@@ -163,25 +154,28 @@ int main(void)
 				ps2ControlEnabled = 1;
 			}
 
-			delay_ms(20);
+			delay_ms(MAIN_LOOP_DELAY_MS);
 			continue;
 		}
 
+		/* 左摇杆上下映射为前进速度，右摇杆左右映射为转向速度。 */
 		forwardSpeed = PS2_AxisToSpeed(joystick.LJoy_UD, 1);
 		rotateSpeed = PS2_AxisToSpeed(joystick.RJoy_LR, 0);
 		leftSpeed = LimitMotorSpeed((int16_t)(forwardSpeed + rotateSpeed));
 		rightSpeed = LimitMotorSpeed((int16_t)(forwardSpeed - rotateSpeed));
 
+		/* 四个电机分别下发速度，最后统一同步启动。 */
 		Motor_SetSignedSpeed(motorAddr[0], MOTOR_LEFT_FORWARD_DIR, leftSpeed);
-		delay_ms(5);
+		delay_ms(MOTOR_CMD_DELAY_MS);
 		Motor_SetSignedSpeed(motorAddr[1], MOTOR_RIGHT_FORWARD_DIR, rightSpeed);
-		delay_ms(5);
+		delay_ms(MOTOR_CMD_DELAY_MS);
 		Motor_SetSignedSpeed(motorAddr[2], MOTOR_LEFT_FORWARD_DIR, leftSpeed);
-		delay_ms(5);
+		delay_ms(MOTOR_CMD_DELAY_MS);
 		Motor_SetSignedSpeed(motorAddr[3], MOTOR_RIGHT_FORWARD_DIR, rightSpeed);
-		delay_ms(5);
+		delay_ms(MOTOR_CMD_DELAY_MS);
 		Emm_V5_Synchronous_motion(0);
 
+		/* L1+L2：只触发一次舵机正转，避免循环中重复发送同一命令。 */
 		if((servoRunning == 0) &&
 		   ((joystick.btn2 & (PS2_BTN_L1 | PS2_BTN_L2)) == (PS2_BTN_L1 | PS2_BTN_L2)))
 		{
@@ -189,6 +183,6 @@ int main(void)
 			servoRunning = 1;
 		}
 
-		delay_ms(20);
+		delay_ms(MAIN_LOOP_DELAY_MS);
 	}
 }

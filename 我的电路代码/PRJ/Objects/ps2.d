@@ -12,3 +12,4 @@
 .\objects\ps2.o: ..\LIB\STM32F10x_StdPeriph_Lib_V3.5.0\inc\stm32f10x_tim.h
 .\objects\ps2.o: ..\LIB\STM32F10x_StdPeriph_Lib_V3.5.0\inc\stm32f10x_usart.h
 .\objects\ps2.o: ..\LIB\STM32F10x_StdPeriph_Lib_V3.5.0\inc\misc.h
+.\objects\ps2.o: ..\APP\config.h

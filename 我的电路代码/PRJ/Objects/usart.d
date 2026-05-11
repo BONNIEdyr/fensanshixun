@@ -14,3 +14,4 @@
 .\objects\usart.o: ..\LIB\STM32F10x_StdPeriph_Lib_V3.5.0\inc\stm32f10x_usart.h
 .\objects\usart.o: ..\LIB\STM32F10x_StdPeriph_Lib_V3.5.0\inc\misc.h
 .\objects\usart.o: ..\DRIVERS\fifo.h
+.\objects\usart.o: ..\APP\config.h

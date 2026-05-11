@@ -17,4 +17,5 @@
 .\objects\main.o: ..\DRIVERS\fifo.h
 .\objects\main.o: ..\BSP\Emm_V5.h
 .\objects\main.o: ..\BSP\server.h
+.\objects\main.o: ..\APP\config.h
 .\objects\main.o: ..\DRIVERS\ps2.h

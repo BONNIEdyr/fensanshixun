@@ -12,3 +12,4 @@
 .\objects\board.o: ..\LIB\STM32F10x_StdPeriph_Lib_V3.5.0\inc\stm32f10x_tim.h
 .\objects\board.o: ..\LIB\STM32F10x_StdPeriph_Lib_V3.5.0\inc\stm32f10x_usart.h
 .\objects\board.o: ..\LIB\STM32F10x_StdPeriph_Lib_V3.5.0\inc\misc.h
+.\objects\board.o: ..\APP\config.h

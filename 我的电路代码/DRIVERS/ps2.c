@@ -1,12 +1,5 @@
 #include "ps2.h"
-
-#define PS2_GPIO        GPIOA
-#define PS2_RCC_GPIO    RCC_APB2Periph_GPIOA
-
-#define PS2_DI_PIN      GPIO_Pin_4
-#define PS2_CMD_PIN     GPIO_Pin_5
-#define PS2_CS_PIN      GPIO_Pin_6
-#define PS2_CLK_PIN     GPIO_Pin_7
+#include "config.h"
 
 #define DI_READ()       GPIO_ReadInputDataBit(PS2_GPIO, PS2_DI_PIN)
 #define CMD_HIGH()      GPIO_SetBits(PS2_GPIO, PS2_CMD_PIN)
@@ -68,7 +61,7 @@ static uint8_t PS2_ReadWriteData(uint8_t cmd)
 		}
 
 		CLK_LOW();
-		PS2_DelayUs(16);
+		PS2_DelayUs(PS2_BIT_DELAY_US);
 
 		if(DI_READ())
 		{
@@ -76,7 +69,7 @@ static uint8_t PS2_ReadWriteData(uint8_t cmd)
 		}
 
 		CLK_HIGH();
-		PS2_DelayUs(16);
+		PS2_DelayUs(PS2_BIT_DELAY_US);
 	}
 
 	return res;

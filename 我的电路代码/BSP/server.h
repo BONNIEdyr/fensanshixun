@@ -2,10 +2,7 @@
 #define __SERVER_H
 
 #include "stm32f10x.h"
-
-#define SERVO_STOP_PULSE       15
-#define SERVO_FORWARD_PULSE     5
-#define SERVO_REVERSE_PULSE    25
+#include "config.h"
 
 void TIM8_PWM_Init(void);
 void Servo_All_SetPulse(uint16_t pulse);

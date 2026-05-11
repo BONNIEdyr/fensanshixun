@@ -1,4 +1,5 @@
 #include "board.h"
+#include "config.h"
 
 /**********************************************************
 ***	Emm_V5.0�����ջ���������
@@ -22,7 +23,7 @@ void nvic_init(void)
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
 	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
-	NVIC_InitStructure.NVIC_IRQChannel = USART1_IRQn;
+	NVIC_InitStructure.NVIC_IRQChannel = MOTOR_USART_IRQn;
 	NVIC_Init(&NVIC_InitStructure);
 }
 
@@ -34,10 +35,10 @@ void nvic_init(void)
 void clock_init(void)
 {
 	// ʹ��GPIOA��AFIO����ʱ��
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA | RCC_APB2Periph_GPIOB | RCC_APB2Periph_AFIO, ENABLE);
+	RCC_APB2PeriphClockCmd(MOTOR_USART_GPIO_RCC | RCC_APB2Periph_GPIOB | RCC_APB2Periph_AFIO, ENABLE);
 
 	// ʹ��USART1����ʱ��
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1, ENABLE);
+	RCC_APB2PeriphClockCmd(MOTOR_USART_RCC, ENABLE);
 
 	// ����JTAG
 	GPIO_PinRemapConfig(GPIO_Remap_SWJ_JTAGDisable, ENABLE);
@@ -55,43 +56,43 @@ void usart_init(void)
 **********************************************************/
 	// PA9 - USART1_TX
 	GPIO_InitTypeDef  GPIO_InitStructure;
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_9;
+	GPIO_InitStructure.GPIO_Pin = MOTOR_USART_TX_PIN;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;				/* ����������� */
-	GPIO_Init(GPIOA, &GPIO_InitStructure);
+	GPIO_Init(MOTOR_USART_GPIO, &GPIO_InitStructure);
 	// PA10 - USART1_RX
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_10;
+	GPIO_InitStructure.GPIO_Pin = MOTOR_USART_RX_PIN;
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPU;					/* �������� */
-	GPIO_Init(GPIOA, &GPIO_InitStructure);
+	GPIO_Init(MOTOR_USART_GPIO, &GPIO_InitStructure);
 
 /**********************************************************
 ***	��ʼ��USART1
 **********************************************************/
 	USART_InitTypeDef USART_InitStructure;
-	USART_InitStructure.USART_BaudRate = 115200;
+	USART_InitStructure.USART_BaudRate = MOTOR_USART_BAUDRATE;
 	USART_InitStructure.USART_WordLength = USART_WordLength_8b;
 	USART_InitStructure.USART_StopBits = USART_StopBits_1;
 	USART_InitStructure.USART_Parity = USART_Parity_No;
 	USART_InitStructure.USART_HardwareFlowControl = USART_HardwareFlowControl_None;
 	USART_InitStructure.USART_Mode = USART_Mode_Tx | USART_Mode_Rx;
-	USART_Init(USART1, &USART_InitStructure);
+	USART_Init(MOTOR_USART, &USART_InitStructure);
 
 /**********************************************************
 ***	���USART1�ж�
 **********************************************************/
-	USART1->SR; USART1->DR;
-	USART_ClearITPendingBit(USART1, USART_IT_RXNE);
+	MOTOR_USART->SR; MOTOR_USART->DR;
+	USART_ClearITPendingBit(MOTOR_USART, USART_IT_RXNE);
 
 /**********************************************************
 ***	ʹ��USART1�ж�
 **********************************************************/	
-	USART_ITConfig(USART1, USART_IT_RXNE, ENABLE);
-	USART_ITConfig(USART1, USART_IT_IDLE, ENABLE);
+	USART_ITConfig(MOTOR_USART, USART_IT_RXNE, ENABLE);
+	USART_ITConfig(MOTOR_USART, USART_IT_IDLE, ENABLE);
 
 /**********************************************************
 ***	ʹ��USART1
 **********************************************************/
-	USART_Cmd(USART1, ENABLE);
+	USART_Cmd(MOTOR_USART, ENABLE);
 }
 
 /**
