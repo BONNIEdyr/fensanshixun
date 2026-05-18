@@ -5,9 +5,11 @@
 #include "config.h"
 
 void TIM8_PWM_Init(void);
-void Servo_All_SetPulse(uint16_t pulse);
-void Servo_All_Forward(void);
+void Servo_Gimbal_SetAngle(uint16_t angle);
+void Servo_Tray_SetAngle(uint16_t angle);
+void Servo_Claw_SetAngle(uint16_t angle);
+void Servo_All_SetZero(void);
 void Servo_All_Stop(void);
-void Servo_All_Reverse(void);
+void Servo_All_Forward(void);
 
 #endif
