@@ -438,16 +438,6 @@
               <FileType>5</FileType>
               <FilePath>..\BSP\board.h</FilePath>
             </File>
-            <File>
-              <FileName>server.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\BSP\server.c</FilePath>
-            </File>
-            <File>
-              <FileName>server.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\BSP\server.h</FilePath>
-            </File>
           </Files>
         </Group>
         <Group>
@@ -502,6 +492,16 @@
               <FileName>ps2.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\DRIVERS\ps2.h</FilePath>
+            </File>
+            <File>
+              <FileName>servo_pwm.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\DRIVERS\servo_pwm.c</FilePath>
+            </File>
+            <File>
+              <FileName>servo_pwm.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\DRIVERS\servo_pwm.h</FilePath>
             </File>
           </Files>
         </Group>

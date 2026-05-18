@@ -49,35 +49,6 @@
 #define PS2_CLK_PIN                    GPIO_Pin_7 /* PS2时钟CLK引脚，用于模拟通信时序 */
 #define PS2_BIT_DELAY_US                 16    /* PS2每一位读写之间的延时，单位us */
 
-/* Servo PWM output */
-#define SERVO_TIM                      TIM8    /* 产生舵机PWM信号使用的定时器 */
-#define SERVO_TIM_RCC                  RCC_APB2Periph_TIM8 /* 舵机PWM定时器时钟 */
-#define SERVO_GPIO                     GPIOC   /* 舵机PWM输出引脚所在的GPIO端口 */
-#define SERVO_GPIO_RCC                 RCC_APB2Periph_GPIOC /* 舵机PWM GPIO端口时钟 */
-#define SERVO_TRAY_PIN                 GPIO_Pin_6 /* 2号托盘舵机，白线，PC6，TIM8_CH1 */
-#define SERVO_GIMBAL_PIN               GPIO_Pin_7 /* 1号云台舵机，灰线，PC7，TIM8_CH2 */
-#define SERVO_CLAW_PIN                 GPIO_Pin_8 /* 3号夹爪舵机，橙线，PC8，TIM8_CH3 */
-
-#define SERVO_CH1_PIN                  SERVO_TRAY_PIN /* TIM8通道1：托盘舵机 */
-#define SERVO_CH2_PIN                  SERVO_GIMBAL_PIN /* TIM8通道2：云台舵机 */
-#define SERVO_CH3_PIN                  SERVO_CLAW_PIN /* TIM8通道3：夹爪舵机 */
-
-#define SERVO_TIM_PERIOD               (200 - 1) /* 舵机PWM定时器自动重装载值，决定PWM周期计数上限 */
-#define SERVO_TIM_PRESCALER            (7200 - 1) /* 舵机PWM定时器预分频值，决定计数频率 */
-
-#define SERVO_MIN_ANGLE                   0    /* 舵机最小角度 */
-#define SERVO_MAX_ANGLE                 180    /* 舵机最大角度 */
-#define SERVO_MIN_PULSE                   5    /* 0度对应PWM比较值，约0.5ms */
-#define SERVO_ZERO_PULSE                 15    /* 90度零位对应PWM比较值，约1.5ms */
-#define SERVO_MAX_PULSE                  25    /* 180度对应PWM比较值，约2.5ms */
-
-#define SERVO_GIMBAL_ZERO_ANGLE           0    /* 云台舵机零位角度 */
-#define SERVO_TRAY_ZERO_ANGLE             0    /* 托盘舵机零位角度 */
-#define SERVO_CLAW_ZERO_ANGLE            90    /* 夹爪舵机零位角度 */
-
-#define SERVO_CLAW_CLOSE_ANGLE          150    /* 夹爪动作角度：零位基础上正向转动60度 */
-#define SERVO_GIMBAL_TURN_ANGLE         180    /* 云台动作角度：从零位转到180度 */
-#define SERVO_TRAY_TURN_ANGLE            90    /* 托盘动作角度：从零位转到90度 */
-#define SERVO_ACTION_DELAY_MS          2000    /* 舵机动作之间的等待时间，单位ms */
+/* (SERVO_TIM8 section deleted - TIM2 swing servos now in DRIVERS/servo_pwm.h) */
 
 #endif

@@ -1,0 +1,22 @@
+# Keil/MDK 编译产物
+*.o
+*.crf
+*.d
+*.axf
+*.hex
+*.htm
+*.lnp
+*.map
+*.dep
+*.build_log.htm
+*.uvguix.*
+*.uvoptx
+
+# IDE/编辑器
+.vscode/
+*.log
+*.log.lock
+
+# 临时文件
+*~
+*.swp

@@ -2,9 +2,9 @@
 #include "delay.h"
 #include "usart.h"
 #include "Emm_V5.h"
-#include "server.h"
 #include "ps2.h"
 #include "config.h"
+#include "servo_pwm.h"
 
 /**
  * @brief  摇杆值转速度
@@ -17,6 +17,7 @@ static int16_t PS2_AxisToSpeed(uint8_t value, uint8_t reverse)
 	{
 		axis = (int16_t)JOYSTICK_CENTER - (int16_t)value;
 	}
+ 
 	else
 	{
 		axis = (int16_t)value - (int16_t)JOYSTICK_CENTER;
@@ -74,12 +75,11 @@ static void Motor_AllStop(const uint8_t motorAddr[4])
 }
 
 /**
- * @brief  系统全局停止（含舵机）
+ * @brief  系统全局停止
  */
 static void AllStop(const uint8_t motorAddr[4])
 {
 	Motor_AllStop(motorAddr);
-	Servo_All_Stop();
 }
 
 /**
@@ -100,9 +100,15 @@ int main(void)
 	const uint8_t motorAddr[4] = {1, 2, 3, 4};
 	PS2_JoystickTypeDef joystick;
 
+	/* ----- 舵机摆动控制变量（PWM/USER移植）----- */
+	uint16_t servoPWM1 = 750;    // 舵机1（PA0）当前PWM，750≈90度中位
+	uint16_t servoPWM2 = 750;    // 舵机2（PA1）当前PWM
+	uint8_t  servoDir1  = 1;     // 舵机1方向：1增大（正转），0减小（反转）
+	uint8_t  servoDir2  = 0;     // 舵机2方向与1相反
+
 	// 硬件初始化
 	board_init();
-	TIM8_PWM_Init();
+	Servo_PWM_Init();            // 初始化TIM2舵机PWM（PA0、PA1）- DRIVERS层
 	PS2_Init();
 
 	// 初始状态强制停止
@@ -111,7 +117,6 @@ int main(void)
 		Emm_V5_Stop_Now(motorAddr[i], 0);
 		delay_ms(5);
 	}
-	Servo_All_Stop();
 
 	// 等待驱动器初始化
 	delay_ms(2000);
@@ -180,12 +185,27 @@ int main(void)
 			Emm_V5_Synchronous_motion(0);
 		}
 
-		// 7. 舵机控制（放在外面，确保车子松开摇杆静止时，舵机依然能够正常动作）
-		if((servoRunning == 0) &&
-		   ((joystick.btn2 & (PS2_BTN_L1 | PS2_BTN_L2)) == (PS2_BTN_L1 | PS2_BTN_L2)))
+		// 7. PS2控制TIM2往复摆动舵机
+		//    按住 L1+L2：舵机往复摆动
+		//    松开 L1+L2：停止摆动
+		if((joystick.btn2 & (PS2_BTN_L1 | PS2_BTN_L2)) == (PS2_BTN_L1 | PS2_BTN_L2))
 		{
-			Servo_All_Forward();
-			servoRunning = 1;
+			if(servoRunning == 0)
+			{
+				servoRunning = 1;
+			}
+
+			delay_ms(50);
+
+			/* 调用DRIVERS层摆动控制 */
+			Servo_Swing_Step(&servoPWM1, &servoDir1, &servoPWM2, &servoDir2);
+		}
+		else
+		{
+			if(servoRunning == 1)
+			{
+				servoRunning = 0;
+			}
 		}
 
 		delay_ms(20);
