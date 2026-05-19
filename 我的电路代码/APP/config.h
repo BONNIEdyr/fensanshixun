@@ -13,7 +13,7 @@
 #define JOYSTICK_DEAD_ZONE               12    /* 摇杆死区范围，小于该偏移量时认为没有速度输入 */
 
 /* Motor control */
-#define MOTOR_COUNT                       4    /* 小车使用的电机数量 */
+#define MOTOR_COUNT                       5    /* 小车使用的电机数量（包含第5号滑轨电机） */
 #define MOTOR_MAX_RPM                   200   /* 电机最大目标转速，单位RPM，用于限制摇杆映射后的速度 */
 #define MOTOR_ACC                       200    /* Emm_V5速度模式加速度参数，数值越大加减速越快 */
 
@@ -21,6 +21,7 @@
 #define MOTOR_ADDR_2                      2    /* 第2个电机驱动器地址 */
 #define MOTOR_ADDR_3                      3    /* 第3个电机驱动器地址 */
 #define MOTOR_ADDR_4                      4    /* 第4个电机驱动器地址 */
+#define MOTOR_ADDR_5                      5    /* 【已新增】第5个滑轨电机驱动器地址 */
 
 #define MOTOR_LEFT_FORWARD_DIR            0    /* 左侧电机前进时发送给驱动器的方向值 */
 #define MOTOR_RIGHT_FORWARD_DIR           1    /* 右侧电机前进时发送给驱动器的方向值 */
@@ -51,4 +52,10 @@
 
 /* (SERVO_TIM8 section deleted - TIM2 swing servos now in DRIVERS/servo_pwm.h) */
 
-#endif
+/* Slide Rail Mechanism Parameters */
+#define SLIDE_BELT_PITCH                2    /* 【已修正】皮带节距为 2mm (标准GT2皮带) */
+#define SLIDE_PULLEY_TEETH             20    /* 【请根据实物修改】你的同步带轮（那个钢圈）有多少个齿 */
+
+/* 自动计算：滑轨转一圈走多少毫米 (导程) */
+#define SLIDE_LEAD      (SLIDE_PULLEY_TEETH * SLIDE_BELT_PITCH)
+#endif /* __CONFIG_H */

@@ -153,37 +153,28 @@ int main(void)
 		strafeSpeed  = PS2_AxisToSpeed(joystick.LJoy_LR, 0); // 左摇杆左右：横移
 		rotateSpeed  = PS2_AxisToSpeed(joystick.RJoy_LR, 0); // 右摇杆左右：自转
 
-		// 平移（新增：判断摇杆归零后执行全机急停刹车）
-		if (forwardSpeed == 0 && strafeSpeed == 0 && rotateSpeed == 0)
-		{
-			// 平移（如果没有任何控制输入，直接发送急停锁死命令，跳过下方的速度解算）
-			Motor_AllStop(motorAddr);
-		}
-		else
-		{
-			// 4. 麦克纳姆轮运动学解算
-			// 平移
-			v1 = LimitMotorSpeed((int16_t)(forwardSpeed + strafeSpeed + rotateSpeed)); // 左前
-			// 平移
-			v2 = LimitMotorSpeed((int16_t)(forwardSpeed - strafeSpeed - rotateSpeed)); // 右前
-			// 平移
-			v3 = LimitMotorSpeed((int16_t)(forwardSpeed - strafeSpeed + rotateSpeed)); // 左后
-			// 平移
-			v4 = LimitMotorSpeed((int16_t)(forwardSpeed + strafeSpeed - rotateSpeed)); // 右后
+		// 4. 麦克纳姆轮运动学解算
+		// 平移
+		v1 = LimitMotorSpeed((int16_t)(forwardSpeed + strafeSpeed + rotateSpeed)); // 左前
+		// 平移
+		v2 = LimitMotorSpeed((int16_t)(forwardSpeed - strafeSpeed - rotateSpeed)); // 右前
+		// 平移
+		v3 = LimitMotorSpeed((int16_t)(forwardSpeed - strafeSpeed + rotateSpeed)); // 左后
+		// 平移
+		v4 = LimitMotorSpeed((int16_t)(forwardSpeed + strafeSpeed - rotateSpeed)); // 右后
 
-			// 5. 下发速度指令到电机缓存
-			Motor_SetSignedSpeed(motorAddr[0], MOTOR_LEFT_FORWARD_DIR, v1);
-			delay_ms(5);
-			Motor_SetSignedSpeed(motorAddr[1], MOTOR_RIGHT_FORWARD_DIR, v2);
-			delay_ms(5);
-			Motor_SetSignedSpeed(motorAddr[2], MOTOR_LEFT_FORWARD_DIR, v3);
-			delay_ms(5);
-			Motor_SetSignedSpeed(motorAddr[3], MOTOR_RIGHT_FORWARD_DIR, v4);
-			delay_ms(5);
-			
-			// 6. 发送同步命令，四个电机同时执行
-			Emm_V5_Synchronous_motion(0);
-		}
+		// 5. 下发速度指令到电机缓存
+		Motor_SetSignedSpeed(motorAddr[0], MOTOR_LEFT_FORWARD_DIR, v1);
+		delay_ms(5);
+		Motor_SetSignedSpeed(motorAddr[1], MOTOR_RIGHT_FORWARD_DIR, v2);
+		delay_ms(5);
+		Motor_SetSignedSpeed(motorAddr[2], MOTOR_LEFT_FORWARD_DIR, v3);
+		delay_ms(5);
+		Motor_SetSignedSpeed(motorAddr[3], MOTOR_RIGHT_FORWARD_DIR, v4);
+		delay_ms(5);
+		
+		// 6. 发送同步命令，四个电机同时执行
+		Emm_V5_Synchronous_motion(0);
 
 		// 7. PS2控制TIM2往复摆动舵机
 		//    按住 L1+L2：舵机往复摆动
