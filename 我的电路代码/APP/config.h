@@ -11,11 +11,12 @@
 /* PS2 joystick speed mapping */
 #define JOYSTICK_CENTER                 128    /* PS2摇杆中位ADC值，偏离该值表示摇杆方向输入 */
 #define JOYSTICK_DEAD_ZONE               12    /* 摇杆死区范围，小于该偏移量时认为没有速度输入 */
+#define JOYSTICK_ZERO_STOP_DELAY_MS       500    /* 摇杆归零后等待此毫秒数再急停，让车利用惯性滑行 */
 
 /* Motor control */
 #define MOTOR_COUNT                       5    /* 小车使用的电机数量（包含第5号滑轨电机） */
 #define MOTOR_MAX_RPM                   200   /* 电机最大目标转速，单位RPM，用于限制摇杆映射后的速度 */
-#define MOTOR_ACC                       200    /* Emm_V5速度模式加速度参数，数值越大加减速越快 */
+#define MOTOR_ACC                       255    /* Emm_V5速度模式加速度参数，数值越大加减速越快 */
 
 #define MOTOR_ADDR_1                      1    /* 第1个电机驱动器地址 */
 #define MOTOR_ADDR_2                      2    /* 第2个电机驱动器地址 */
@@ -58,4 +59,27 @@
 
 /* 自动计算：滑轨转一圈走多少毫米 (导程) */
 #define SLIDE_LEAD      (SLIDE_PULLEY_TEETH * SLIDE_BELT_PITCH)
+
+/**********************************************************
+ * Servo (TIM8 advanced timer) parameters
+ * TIM8 uses APB2, CH1/CH2/CH3 on PC6/PC7/PC8
+ **********************************************************/
+#define SERVO_TIM                    TIM8            /* 使用TIM8高级定时器 */
+#define SERVO_TIM_RCC                RCC_APB2Periph_TIM8  /* TIM8时钟在APB2上 */
+#define SERVO_TIM_GPIO_RCC           RCC_APB2Periph_GPIOC /* 引脚GPIOC时钟 */
+
+/* 舵机PWM引脚定义（TIM8通道） */
+#define SERVO1_PIN                   GPIO_Pin_6      /* PC6 = TIM8_CH1 */
+#define SERVO2_PIN                   GPIO_Pin_7      /* PC7 = TIM8_CH2 */
+#define SERVO3_PIN                   GPIO_Pin_8      /* PC8 = TIM8_CH3 */
+#define SERVO_GPIO                   GPIOC           /* 舵机PWM引脚所在端口 */
+
+/* 舵机角度与PWM脉冲宽度（50Hz=20ms，72000000/144=500KHz计数，ARR=9999） */
+#define SERVO_PWM_MIN                250             /* 0.5ms 对应约0度 */
+#define SERVO_PWM_MID                750             /* 1.5ms 对应约90度 */
+#define SERVO_PWM_MAX                1250            /* 2.5ms 对应约180度 */
+#define SERVO_PWM_STEP               50              /* 每次摆动步进值 */
+#define SERVO_ARR                    9999            /* 自动重装载值 */
+#define SERVO_PSC                    143             /* 预分频值 */
+
 #endif /* __CONFIG_H */
