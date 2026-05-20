@@ -11,7 +11,8 @@
 /* PS2 joystick speed mapping */
 #define JOYSTICK_CENTER                 128    /* PS2摇杆中位ADC值，偏离该值表示摇杆方向输入 */
 #define JOYSTICK_DEAD_ZONE               12    /* 摇杆死区范围，小于该偏移量时认为没有速度输入 */
-#define JOYSTICK_ZERO_STOP_DELAY_MS       500    /* 摇杆归零后等待此毫秒数再急停，让车利用惯性滑行 */
+#define JOYSTICK_ZERO_STOP_DELAY_MS     500    /* 摇杆归零后等待此毫秒数再急停，让车利用惯性滑行 */
+#define RJOYSTICK_MAX_SPEED             100    /* 右摇杆最大速度限制，限制旋转速度最大值 */
 
 /* Motor control */
 #define MOTOR_COUNT                       5    /* 小车使用的电机数量（包含第5号滑轨电机） */
@@ -54,8 +55,8 @@
 /* (SERVO_TIM8 section deleted - TIM2 swing servos now in DRIVERS/servo_pwm.h) */
 
 /* Slide Rail Mechanism Parameters */
-#define SLIDE_BELT_PITCH                2    /* 【已修正】皮带节距为 2mm (标准GT2皮带) */
-#define SLIDE_PULLEY_TEETH             20    /* 【请根据实物修改】你的同步带轮（那个钢圈）有多少个齿 */
+#define SLIDE_BELT_PITCH                2    /* 皮带节距为 2mm (标准GT2皮带) */
+#define SLIDE_PULLEY_TEETH             25    /* 【已修正】同步带轮为25齿 */
 
 /* 自动计算：滑轨转一圈走多少毫米 (导程) */
 #define SLIDE_LEAD      (SLIDE_PULLEY_TEETH * SLIDE_BELT_PITCH)
@@ -81,5 +82,29 @@
 #define SERVO_PWM_STEP               50              /* 每次摆动步进值 */
 #define SERVO_ARR                    9999            /* 自动重装载值 */
 #define SERVO_PSC                    143             /* 预分频值 */
+
+/**********************************************************
+ * Slide Rail Motor (Motor 5) - Position Control Parameters
+ * Uses Emm_V5_Pos_Control with absolute mode (raF=1)
+ **********************************************************/
+#define SLIDE_ADDR                    5               /* 滑轨电机驱动器地址 */
+
+/* 回零参数（多圈无限位碰撞回零） */
+#define SLIDE_HOMING_VEL              200             /* 回零速度，单位RPM */
+#define SLIDE_HOMING_TIMEOUT_MS      5000             /* 回零等待超时，单位ms */
+#define SLIDE_SL_VEL                  50              /* 碰撞检测转速，单位RPM */
+#define SLIDE_SL_MA                   500             /* 碰撞检测电流，单位mA */
+#define SLIDE_SL_MS                   500             /* 碰撞检测维持时间，单位ms */
+
+/* 位置模式运动参数 */
+#define SLIDE_POS_VEL                 300             /* 位置模式速度，单位RPM */
+#define SLIDE_POS_ACC                 100              /* 位置模式加速度 */
+
+/* 位置换算
+ * 滑轨导程 = 25齿 × 2mm = 50mm/转
+ * 1.8°步进电机，实测脉冲当量为 80 脉冲/mm
+ * 10cm = 100mm × 80 = 8000 脉冲 */
+#define SLIDE_PULSES_PER_MM           80              /* 80 脉冲/mm → 10cm = 8000 脉冲 */
+#define SLIDE_10CM_PULSES            (100UL * SLIDE_PULSES_PER_MM)  /* 10cm对应脉冲数 */
 
 #endif /* __CONFIG_H */

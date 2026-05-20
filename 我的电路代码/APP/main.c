@@ -8,8 +8,11 @@
 
 /**
  * @brief  摇杆值转速度
+ * @param  value    摇杆原始ADC值
+ * @param  reverse  是否反转方向
+ * @param  maxSpeed 该轴的最大速度限制值
  */
-static int16_t PS2_AxisToSpeed(uint8_t value, uint8_t reverse)
+static int16_t PS2_AxisToSpeed(uint8_t value, uint8_t reverse, int16_t maxSpeed)
 {
 	int16_t axis;
 
@@ -28,7 +31,7 @@ static int16_t PS2_AxisToSpeed(uint8_t value, uint8_t reverse)
 		return 0;
 	}
 
-	return (int16_t)((axis * MOTOR_MAX_RPM) / 127);
+	return (int16_t)((axis * maxSpeed) / 127);
 }
 
 /**
@@ -111,6 +114,11 @@ int main(void)
 	uint8_t  servoDir2  = 0;     // 舵机2与1反向
 	uint8_t  servoDir3  = 1;     // 舵机3与1同向
 
+	/* ----- 滑轨电机5控制变量 ----- */
+	uint8_t  slideHomed = 0;     // 滑轨回零完成标志：0未完成，1已完成
+	uint8_t  slideTriggered = 0; // 滑轨10cm运动已触发标志，防止重复触发
+	uint8_t  prevBtn2 = 0;       // 上一次的btn2值，用于按键边沿检测
+
 	// 硬件初始化
 	board_init();
 	Servo_PWM_Init();            // 初始化TIM8舵机PWM（PC6_CH1/PC7_CH2/PC8_CH3）
@@ -125,6 +133,34 @@ int main(void)
 
 	// 等待驱动器初始化
 	delay_ms(2000);
+
+	/* ===== 滑轨电机5上电自动回零 ===== */
+	Emm_V5_Origin_Modify_Params(
+		SLIDE_ADDR,        // 地址5
+		1,                 // svF=1 存储（每次上电都回零）
+		2,                 // o_mode=2 多圈无限位碰撞回零
+		0,                 // o_dir=0 CW方向走到底部
+		SLIDE_HOMING_VEL,  // 回零速度200RPM
+		SLIDE_HOMING_TIMEOUT_MS, // 超时5秒
+		SLIDE_SL_VEL,      // 碰撞检测转速50RPM
+		SLIDE_SL_MA,       // 碰撞检测电流500mA
+		SLIDE_SL_MS,       // 碰撞检测维持时间500ms
+		0);                // potF=0 不上电自动触发（我们手动触发）
+	delay_ms(MOTOR_CMD_DELAY_MS);
+
+	// 触发回零
+	Emm_V5_Origin_Trigger_Return(SLIDE_ADDR, 2, 0);
+	// 等待回零完成（阻塞等待，此处延时需大于回零实际耗时）
+	delay_ms(SLIDE_HOMING_TIMEOUT_MS + 1000);
+
+	// 回零完成后，将当前位置标记为绝对零点
+	Emm_V5_Reset_CurPos_To_Zero(SLIDE_ADDR);
+	delay_ms(MOTOR_CMD_DELAY_MS);
+
+	// 确保滑轨电机静止
+	Emm_V5_Stop_Now(SLIDE_ADDR, 0);
+	delay_ms(MOTOR_CMD_DELAY_MS);
+	slideHomed = 1;  // 标记回零完成
 
 	while(1)
 	{
@@ -166,9 +202,9 @@ int main(void)
 		}
 
 		// 3. 读取手柄摇杆数据
-		forwardSpeed = PS2_AxisToSpeed(joystick.LJoy_UD, 1); // 左摇杆上下：前进
-		strafeSpeed  = PS2_AxisToSpeed(joystick.LJoy_LR, 0); // 左摇杆左右：横移
-		rotateSpeed  = PS2_AxisToSpeed(joystick.RJoy_LR, 0); // 右摇杆左右：自转
+		forwardSpeed = PS2_AxisToSpeed(joystick.LJoy_UD, 1, MOTOR_MAX_RPM);   // 左摇杆上下：前进
+		strafeSpeed  = PS2_AxisToSpeed(joystick.LJoy_LR, 0, MOTOR_MAX_RPM);    // 左摇杆左右：横移
+		rotateSpeed  = PS2_AxisToSpeed(joystick.RJoy_LR, 0, RJOYSTICK_MAX_SPEED); // 右摇杆左右：自转
 
 		// 4. 摇杆归零急停逻辑（非阻塞）
 		//    松手回中 → 立即发送速度0让电机按MOTOR_ACC自然减速
@@ -230,12 +266,27 @@ int main(void)
 			Emm_V5_Synchronous_motion(0);
 		}
 
-		// 8. PS2控制TIM8三路舵机往复摆动
+		// 8. 舵机摆动 + 滑轨电机5运动（L1 + L2 同时触发）
 		if((joystick.btn2 & (PS2_BTN_L1 | PS2_BTN_L2)) == (PS2_BTN_L1 | PS2_BTN_L2))
 		{
+			// 标记舵机正在运行（持续摆动）
 			if(servoRunning == 0)
 			{
 				servoRunning = 1;
+			}
+
+			// 滑轨电机5仅在L1+L2按下的瞬间触发一次（边沿检测）
+			if(!(prevBtn2 & PS2_BTN_L1) || !(prevBtn2 & PS2_BTN_L2))
+			{
+				if(slideHomed && !slideTriggered)
+				{
+					// 绝对位置运动至10cm处（逆时针方向）
+					Emm_V5_Pos_Control(SLIDE_ADDR, 1, SLIDE_POS_VEL,
+					                   SLIDE_POS_ACC, SLIDE_10CM_PULSES, 1, 0);
+					delay_ms(MOTOR_CMD_DELAY_MS);
+					Emm_V5_Synchronous_motion(0);
+					slideTriggered = 1;
+				}
 			}
 
 			delay_ms(50);
@@ -246,11 +297,18 @@ int main(void)
 		}
 		else
 		{
+			// L1+L2松开 → 停止舵机，重置滑轨触发标志
 			if(servoRunning == 1)
 			{
 				servoRunning = 0;
 			}
+			if(slideTriggered)
+			{
+				slideTriggered = 0;
+			}
 		}
+
+		prevBtn2 = joystick.btn2;  // 保存本次按键状态用于边沿检测
 
 		delay_ms(MAIN_LOOP_DELAY_MS);
 	}
