@@ -2,6 +2,7 @@
 
 /**
  * @brief  初始化TIM8高级定时器，在PC6(CH1)/PC7(CH2)/PC8(CH3)上输出50Hz舵机PWM
+ *         PC6=夹爪(180°), PC7=云台(270°), PC8=托盘(270°)
  *         注意：TIM8是高级定时器，需调用TIM_CtrlPWMOutputs使能主输出
  *         定时时间=(ARR+1)(PSC+1)/Tclk=(9999+1)*(143+1)/72MHz=20ms=50Hz
  */
@@ -15,8 +16,8 @@ void Servo_PWM_Init(void)
 	RCC_APB2PeriphClockCmd(SERVO_TIM_GPIO_RCC, ENABLE);
 	RCC_APB2PeriphClockCmd(SERVO_TIM_RCC, ENABLE);
 
-	/* 配置PC6、PC7、PC8为复用推挽输出 */
-	GPIO_InitStruct.GPIO_Pin = SERVO1_PIN | SERVO2_PIN | SERVO3_PIN;
+	/* 配置PC6(夹爪)、PC7(云台)、PC8(托盘)为复用推挽输出 */
+	GPIO_InitStruct.GPIO_Pin = SERVO_CLAW_PIN | SERVO_PTZ_PIN | SERVO_TRAY_PIN;
 	GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF_PP;
 	GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_Init(SERVO_GPIO, &GPIO_InitStruct);
@@ -55,61 +56,61 @@ void Servo_PWM_Init(void)
 }
 
 /**
- * @brief  设置舵机1（PC6 = TIM8_CH1）PWM脉冲宽度
+ * @brief  设置夹爪（PC6 = TIM8_CH1，180°舵机）PWM脉冲宽度
  */
-void Servo1_SetPulse(uint16_t pulse)
+void Servo_Claw_SetPulse(uint16_t pulse)
 {
 	TIM_SetCompare1(SERVO_TIM, pulse);
 }
 
 /**
- * @brief  设置舵机2（PC7 = TIM8_CH2）PWM脉冲宽度
+ * @brief  设置云台（PC7 = TIM8_CH2，270°舵机）PWM脉冲宽度
  */
-void Servo2_SetPulse(uint16_t pulse)
+void Servo_PTZ_SetPulse(uint16_t pulse)
 {
 	TIM_SetCompare2(SERVO_TIM, pulse);
 }
 
 /**
- * @brief  设置舵机3（PC8 = TIM8_CH3）PWM脉冲宽度
+ * @brief  设置托盘（PC8 = TIM8_CH3，270°舵机）PWM脉冲宽度
  */
-void Servo3_SetPulse(uint16_t pulse)
+void Servo_Tray_SetPulse(uint16_t pulse)
 {
 	TIM_SetCompare3(SERVO_TIM, pulse);
 }
 
 /**
  * @brief  三路TIM8舵机摆动控制（单次步进）
- *         舵机1、2、3分别以不同的方向/相位往复摆动
+ *         夹爪(PC6)、云台(PC7)、托盘(PC8) 以不同的方向/相位往复摆动
  */
-void Servo_Swing_Step(uint16_t *pwm1, uint8_t *dir1,
-                      uint16_t *pwm2, uint8_t *dir2,
-                      uint16_t *pwm3, uint8_t *dir3)
+void Servo_Swing_Step(uint16_t *pwmClaw, uint8_t *dirClaw,
+                      uint16_t *pwmPTZ, uint8_t *dirPTZ,
+                      uint16_t *pwmTray, uint8_t *dirTray)
 {
-	/* 舵机1 (PC6, TIM8_CH1) 摆动 */
-	if(*dir1) *pwm1 = *pwm1 + SERVO_PWM_STEP;
-	else      *pwm1 = *pwm1 - SERVO_PWM_STEP;
+	/* 夹爪 (PC6, TIM8_CH1, 180°舵机) 摆动 */
+	if(*dirClaw) *pwmClaw = *pwmClaw + SERVO_PWM_STEP;
+	else         *pwmClaw = *pwmClaw - SERVO_PWM_STEP;
 
-	if(*pwm1 > SERVO_PWM_MAX) *dir1 = 0;
-	if(*pwm1 < SERVO_PWM_MIN) *dir1 = 1;
+	if(*pwmClaw > SERVO_PWM_MAX) *dirClaw = 0;
+	if(*pwmClaw < SERVO_PWM_MIN) *dirClaw = 1;
 
-	Servo1_SetPulse(*pwm1);
+	Servo_Claw_SetPulse(*pwmClaw);
 
-	/* 舵机2 (PC7, TIM8_CH2) 与舵机1反向摆动 */
-	if(*dir2) *pwm2 = *pwm2 + SERVO_PWM_STEP;
-	else      *pwm2 = *pwm2 - SERVO_PWM_STEP;
+	/* 云台 (PC7, TIM8_CH2, 270°舵机) 与夹爪反向摆动 */
+	if(*dirPTZ) *pwmPTZ = *pwmPTZ + SERVO_PWM_STEP;
+	else        *pwmPTZ = *pwmPTZ - SERVO_PWM_STEP;
 
-	if(*pwm2 > SERVO_PWM_MAX) *dir2 = 0;
-	if(*pwm2 < SERVO_PWM_MIN) *dir2 = 1;
+	if(*pwmPTZ > SERVO_PWM_MAX) *dirPTZ = 0;
+	if(*pwmPTZ < SERVO_PWM_MIN) *dirPTZ = 1;
 
-	Servo2_SetPulse(*pwm2);
+	Servo_PTZ_SetPulse(*pwmPTZ);
 
-	/* 舵机3 (PC8, TIM8_CH3) 与舵机1同向摆动 */
-	if(*dir3) *pwm3 = *pwm3 + SERVO_PWM_STEP;
-	else      *pwm3 = *pwm3 - SERVO_PWM_STEP;
+	/* 托盘 (PC8, TIM8_CH3, 270°舵机) 与夹爪同向摆动 */
+	if(*dirTray) *pwmTray = *pwmTray + SERVO_PWM_STEP;
+	else         *pwmTray = *pwmTray - SERVO_PWM_STEP;
 
-	if(*pwm3 > SERVO_PWM_MAX) *dir3 = 0;
-	if(*pwm3 < SERVO_PWM_MIN) *dir3 = 1;
+	if(*pwmTray > SERVO_PWM_MAX) *dirTray = 0;
+	if(*pwmTray < SERVO_PWM_MIN) *dirTray = 1;
 
-	Servo3_SetPulse(*pwm3);
+	Servo_Tray_SetPulse(*pwmTray);
 }

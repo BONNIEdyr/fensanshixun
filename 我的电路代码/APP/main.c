@@ -5,6 +5,7 @@
 #include "ps2.h"
 #include "config.h"
 #include "servo_pwm.h"
+#include "package_action.h"
 
 /**
  * @brief  摇杆值转速度
@@ -45,7 +46,8 @@ static int16_t LimitMotorSpeed(int16_t speed)
 }
 
 /**
- * @brief  设置带方向的速度（带同步标志）
+ * @brief  设置带方向的速度（带同步标志snF=1）
+ * @note   进入同步等待缓存，需后续调用Emm_V5_Synchronous_motion_All触发
  */
 static void Motor_SetSignedSpeed(uint8_t addr, uint8_t forwardDir, int16_t speed)
 {
@@ -59,22 +61,44 @@ static void Motor_SetSignedSpeed(uint8_t addr, uint8_t forwardDir, int16_t speed
 	}
 
 	vel = (uint16_t)speed;
-	// 最后一个参数设为1，表示进入同步等待缓存
+	// snF=1，进入同步等待缓存
 	Emm_V5_Vel_Control(addr, dir, vel, MOTOR_ACC, 1);
 }
 
 /**
- * @brief  全机立即停止
+ * @brief  批量发送4个轮边电机的速度指令（不插入延时）
+ * @note   usart_SendByte本身阻塞等待TXE，字节自动按序发送
+ *         snF=1使所有指令进入同步缓存，最后用一次广播触发
+ */
+static void Motor_SetSpeed_Batch(const uint8_t motorAddr[4],
+                                 int16_t v1, int16_t v2, int16_t v3, int16_t v4)
+{
+	/* 每条速度指令之间加5ms延时，确保电机驱动器处理完上一条指令 */
+	Motor_SetSignedSpeed(motorAddr[0], MOTOR_LEFT_FORWARD_DIR,  v1);
+	delay_ms(5);
+	Motor_SetSignedSpeed(motorAddr[1], MOTOR_RIGHT_FORWARD_DIR, v2);
+	delay_ms(5);
+	Motor_SetSignedSpeed(motorAddr[2], MOTOR_LEFT_FORWARD_DIR,  v3);
+	delay_ms(5);
+	Motor_SetSignedSpeed(motorAddr[3], MOTOR_RIGHT_FORWARD_DIR, v4);
+	delay_ms(5);
+
+	/* 广播地址0同步触发：一条命令触发所有4个电机同时开始运动 */
+	Emm_V5_Synchronous_motion_All();
+}
+
+/**
+ * @brief  全机立即停止（发送停止命令 + 广播同步触发）
  */
 static void Motor_AllStop(const uint8_t motorAddr[4])
 {
 	uint8_t i;
 	for(i = 0; i < 4; i++)
 	{
-		Emm_V5_Stop_Now(motorAddr[i], 1);
-		delay_ms(5);
+		Emm_V5_Stop_Now(motorAddr[i], 1);  /* snF=1 进入同步缓存 */
 	}
-	Emm_V5_Synchronous_motion(0);
+	/* 广播同步触发，所有电机同时停止 */
+	Emm_V5_Synchronous_motion_All();
 }
 
 /**
@@ -91,7 +115,6 @@ static void AllStop(const uint8_t motorAddr[4])
 int main(void)
 {
 	uint8_t i = 0;
-	uint8_t servoRunning = 0;
 	uint8_t ps2ControlEnabled = 0;
 	
 	int16_t forwardSpeed = 0;
@@ -106,23 +129,20 @@ int main(void)
 	uint16_t zeroStopTimer = 0;
 	uint8_t  zeroStopArmed = 0;   // 0=未启动, 1=已启动计时
 
-	/* ----- 舵机摆动控制变量（TIM8/PC6-PC8）----- */
-	uint16_t servoPWM1 = 750;    // 舵机1（PC6=TIM8_CH1）当前PWM，750≈90度中位
-	uint16_t servoPWM2 = 750;    // 舵机2（PC7=TIM8_CH2）当前PWM
-	uint16_t servoPWM3 = 750;    // 舵机3（PC8=TIM8_CH3）当前PWM
-	uint8_t  servoDir1  = 1;     // 舵机1方向：1增大，0减小
-	uint8_t  servoDir2  = 0;     // 舵机2与1反向
-	uint8_t  servoDir3  = 1;     // 舵机3与1同向
-
-	/* ----- 滑轨电机5控制变量 ----- */
-	uint8_t  slideHomed = 0;     // 滑轨回零完成标志：0未完成，1已完成
-	uint8_t  slideTriggered = 0; // 滑轨10cm运动已触发标志，防止重复触发
-	uint8_t  prevBtn2 = 0;       // 上一次的btn2值，用于按键边沿检测
+	/* ----- 边沿检测 & 包执行器 ----- */
+	uint8_t  prevBtn2 = 0;        // 上一次的btn2值，用于按键边沿检测
 
 	// 硬件初始化
 	board_init();
 	Servo_PWM_Init();            // 初始化TIM8舵机PWM（PC6_CH1/PC7_CH2/PC8_CH3）
+	
+	// 上电设置舵机初始位置：夹爪放料位60°，云台托盘位2(180°)，托盘1号位(0°)
+	Servo_Claw_SetPulse(CLAW_POS_RELEASE);
+	Servo_PTZ_SetPulse(PTZ_POS_TRAY2);
+	Servo_Tray_SetPulse(TRAY_POS_1);
+	
 	PS2_Init();
+	Package_Init();               // 初始化包执行器
 
 	// 初始状态强制停止
 	for(i = 0; i < 4; i++)
@@ -160,7 +180,10 @@ int main(void)
 	// 确保滑轨电机静止
 	Emm_V5_Stop_Now(SLIDE_ADDR, 0);
 	delay_ms(MOTOR_CMD_DELAY_MS);
-	slideHomed = 1;  // 标记回零完成
+	/* ===== 滑轨电机5上电后运动到过渡位（绝对位置模式 raF=1） ===== */
+	Emm_V5_Pos_Control(SLIDE_ADDR, 0, SLIDE_POS_VEL, SLIDE_POS_ACC,
+	                   SLIDE_POS_TRANSIT, 0, 1);  // raF=1 绝对位置模式 → 上升到过渡位15cm
+	delay_ms(SLIDE_MOVE_WAIT_MS);  // 等待运动完成（上电这里暂保留固定延时）
 
 	while(1)
 	{
@@ -171,6 +194,7 @@ int main(void)
 		if(joystick.mode != 0x73)
 		{
 			AllStop(motorAddr);
+			Package_Stop();          // 包执行器也停止
 			ps2ControlEnabled = 0;
 			zeroStopArmed = 0;   // 清除急停计时
 			delay_ms(20);
@@ -181,8 +205,8 @@ int main(void)
 		if((joystick.btn2 & (PS2_BTN_R1 | PS2_BTN_R2)) == (PS2_BTN_R1 | PS2_BTN_R2))
 		{
 			AllStop(motorAddr);
+			Package_Stop();          // 包执行器停止
 			ps2ControlEnabled = 0;
-			servoRunning = 0;
 			zeroStopArmed = 0;
 			delay_ms(20);
 			continue;
@@ -219,15 +243,8 @@ int main(void)
 				zeroStopTimer = 0;
 
 				// 立即给所有电机发速度0（带MOTOR_ACC，自然减速）
-				Emm_V5_Vel_Control(motorAddr[0], 0, 0, MOTOR_ACC, 1);
-				delay_ms(5);
-				Emm_V5_Vel_Control(motorAddr[1], 0, 0, MOTOR_ACC, 1);
-				delay_ms(5);
-				Emm_V5_Vel_Control(motorAddr[2], 0, 0, MOTOR_ACC, 1);
-				delay_ms(5);
-				Emm_V5_Vel_Control(motorAddr[3], 0, 0, MOTOR_ACC, 1);
-				delay_ms(5);
-				Emm_V5_Synchronous_motion(0);
+				// 使用批量发送+usart_SendByte阻塞等待TXE，无需delay_ms
+				Motor_SetSpeed_Batch(motorAddr, 0, 0, 0, 0);
 			}
 			else
 			{
@@ -238,6 +255,7 @@ int main(void)
 			if(zeroStopTimer >= JOYSTICK_ZERO_STOP_DELAY_MS)
 			{
 				Motor_AllStop(motorAddr);
+				zeroStopArmed = 0;
 			}
 		}
 		else
@@ -252,64 +270,26 @@ int main(void)
 			v3 = LimitMotorSpeed((int16_t)(forwardSpeed - strafeSpeed + rotateSpeed)); // 左后
 			v4 = LimitMotorSpeed((int16_t)(forwardSpeed + strafeSpeed - rotateSpeed)); // 右后
 
-			// 6. 下发速度指令到电机缓存
-			Motor_SetSignedSpeed(motorAddr[0], MOTOR_LEFT_FORWARD_DIR, v1);
-			delay_ms(5);
-			Motor_SetSignedSpeed(motorAddr[1], MOTOR_RIGHT_FORWARD_DIR, v2);
-			delay_ms(5);
-			Motor_SetSignedSpeed(motorAddr[2], MOTOR_LEFT_FORWARD_DIR, v3);
-			delay_ms(5);
-			Motor_SetSignedSpeed(motorAddr[3], MOTOR_RIGHT_FORWARD_DIR, v4);
-			delay_ms(5);
-			
-			// 7. 发送同步命令，四个电机同时执行
-			Emm_V5_Synchronous_motion(0);
+			// 6. 批量下发速度指令到电机缓存 + 广播同步触发
+			//    连续发送4条命令（usart_SendByte阻塞等待TXE，无需delay_ms），
+			//    最后一条广播同步命令触发所有4个电机同时运动
+			Motor_SetSpeed_Batch(motorAddr, v1, v2, v3, v4);
 		}
 
-		// 8. 舵机摆动 + 滑轨电机5运动（L1 + L2 同时触发）
-		if((joystick.btn2 & (PS2_BTN_L1 | PS2_BTN_L2)) == (PS2_BTN_L1 | PS2_BTN_L2))
+		// 7. L1+L2 边沿触发 → 启动包执行器
+		if(((joystick.btn2 & (PS2_BTN_L1 | PS2_BTN_L2)) == (PS2_BTN_L1 | PS2_BTN_L2)) &&
+		   ((prevBtn2 & (PS2_BTN_L1 | PS2_BTN_L2)) != (PS2_BTN_L1 | PS2_BTN_L2)))
 		{
-			// 标记舵机正在运行（持续摆动）
-			if(servoRunning == 0)
-			{
-				servoRunning = 1;
-			}
-
-			// 滑轨电机5仅在L1+L2按下的瞬间触发一次（边沿检测）
-			if(!(prevBtn2 & PS2_BTN_L1) || !(prevBtn2 & PS2_BTN_L2))
-			{
-				if(slideHomed && !slideTriggered)
-				{
-					// 绝对位置运动至10cm处（逆时针方向）
-					Emm_V5_Pos_Control(SLIDE_ADDR, 1, SLIDE_POS_VEL,
-					                   SLIDE_POS_ACC, SLIDE_10CM_PULSES, 1, 0);
-					delay_ms(MOTOR_CMD_DELAY_MS);
-					Emm_V5_Synchronous_motion(0);
-					slideTriggered = 1;
-				}
-			}
-
-			delay_ms(50);
-
-			Servo_Swing_Step(&servoPWM1, &servoDir1,
-			                 &servoPWM2, &servoDir2,
-			                 &servoPWM3, &servoDir3);
+			Package_StartNext();  // 启动下一个包的序列
 		}
-		else
-		{
-			// L1+L2松开 → 停止舵机，重置滑轨触发标志
-			if(servoRunning == 1)
-			{
-				servoRunning = 0;
-			}
-			if(slideTriggered)
-			{
-				slideTriggered = 0;
-			}
-		}
+
+		// 8. 包执行器 Tick 驱动（在主循环中每轮调用）
+		Package_Tick();
 
 		prevBtn2 = joystick.btn2;  // 保存本次按键状态用于边沿检测
 
 		delay_ms(MAIN_LOOP_DELAY_MS);
 	}
 }
+
+

@@ -11,6 +11,7 @@
 ".\objects\delay.o"
 ".\objects\ps2.o"
 ".\objects\servo_pwm.o"
+".\objects\package_action.o"
 ".\objects\stm32f10x_gpio.o"
 ".\objects\stm32f10x_rcc.o"
 ".\objects\stm32f10x_usart.o"

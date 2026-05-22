@@ -234,6 +234,26 @@ void Emm_V5_Synchronous_motion(uint8_t addr)
 }
 
 /**
+  * @brief    广播多机同步运动（地址0），一次触发所有等待同步的电机
+  * @retval   无
+  * @note     地址0是广播地址，所有收到该命令且snF=1缓存的电机将同时开始运动
+  *           这样只需1条命令即可同步所有轮边电机，无需逐个发4次同步命令
+  */
+void Emm_V5_Synchronous_motion_All(void)
+{
+  uint8_t cmd[16] = {0};
+  
+  // 装载命令——地址0（广播）
+  cmd[0] =  0x00;                       // 广播地址
+  cmd[1] =  0xFF;                       // 功能码
+  cmd[2] =  0x66;                       // 辅助码
+  cmd[3] =  0x6B;                       // 校验字节
+  
+  // 发送命令
+  usart_SendCmd(cmd, 4);
+}
+
+/**
   * @brief    设置单圈回零的零点位置
   * @param    addr  ：电机地址
   * @param    svF   ：是否存储标志，false为不存储，true为存储

@@ -503,6 +503,16 @@
               <FileType>5</FileType>
               <FilePath>..\DRIVERS\servo_pwm.h</FilePath>
             </File>
+            <File>
+              <FileName>package_action.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\DRIVERS\package_action.c</FilePath>
+            </File>
+            <File>
+              <FileName>package_action.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\DRIVERS\package_action.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
