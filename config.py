@@ -1,4 +1,4 @@
-# =========================
+import math
 # 模型路径
 # =========================
 MODEL_PATH = "/root/models/gcmodel/model_272201.mud"
@@ -7,7 +7,7 @@ MODEL_PATH = "/root/models/gcmodel/model_272201.mud"
 # =========================
 # YOLO阈值（调参核心）
 # =========================
-CONF_TH = 0.4          # 置信度阈值（控制误检漏检。越高越严格）【后续调】
+CONF_TH = 0.5          # 置信度阈值（控制误检漏检。越高越严格）【后续调】
 IOU_TH = 0.45          # NMS阈值（去重）
 
 # =========================
@@ -25,8 +25,14 @@ IMAGE_HEIGHT = 224
 
 CENTER_X = IMAGE_WIDTH // 2
 CENTER_Y = IMAGE_HEIGHT // 2
+# =========================
+# 摄像头视场角（需要按实际镜头修改）
+# =========================import math
+FOV_X = 72.0     # 水平视场角
+FOV_Y = 55.0     # 垂直视场角
 
-
+focal_x = CENTER_X / math.tan(math.radians(FOV_X / 2))
+focal_y = CENTER_Y / math.tan(math.radians(FOV_Y / 2))
 # =========================
 # UART通信配置（STM32）
 # =========================
@@ -37,8 +43,8 @@ UART_BAUD = 115200
 # =========================
 # 控制限幅（防止溢出 int8）
 # =========================
-DX_LIMIT = 127
-DY_LIMIT = 127
+DX_LIMIT = 45
+DY_LIMIT = 35
 
 
 # =========================
@@ -46,20 +52,19 @@ DY_LIMIT = 127
 # =========================
 
 # 认为“已对准”的范围【后面调参】
-ALIGN_THRESHOLD_X = 10
-ALIGN_THRESHOLD_Y = 10
+ALIGN_THRESHOLD_X = 3
+ALIGN_THRESHOLD_Y = 3
 
 
 # 可以触发“抓取”的窗口【后续调】
-GRAB_THRESHOLD_X = 15
-GRAB_THRESHOLD_Y = 15
+GRAB_THRESHOLD_X = 2
+GRAB_THRESHOLD_Y = 2
 
 
 # =========================
 # 滤波参数，越大越稳【后续调】
 # =========================
-FILTER_ALPHA = 0.6
-
+FILTER_ALPHA = 0.75
 
 # =========================
 # 通信协议定义

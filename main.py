@@ -1,9 +1,11 @@
 from maix import camera, display, image, app, time
+import math
 
 from detector import Detector
 from comm import Comm
 from filter import LowPassFilter
 from config import *
+
 
 # =========================
 # 初始化
@@ -30,7 +32,8 @@ filter_x = LowPassFilter(alpha=FILTER_ALPHA)
 filter_y = LowPassFilter(alpha=FILTER_ALPHA)
 
 # FPS
-fps = time.fps()
+fps = time.FPS()
+
 
 # =========================
 # 获取最佳目标
@@ -42,12 +45,10 @@ def get_best_target(objs):
     if not objs:
         return None
 
-    # 后续可改：
-    # 1. 最大面积
-    # 2. 最近中心
-    # 3. 最高置信度
-
-    best = max(objs, key=lambda o: o.w * o.h)
+    best = max(
+        objs,
+        key=lambda o: o.w * o.h
+    )
 
     return best
 
@@ -71,21 +72,47 @@ while not app.need_exit():
     # =========================
     if best:
 
+        # =========================
         # 目标中心
+        # =========================
         cx = best.x + best.w // 2
         cy = best.y + best.h // 2
 
-        # 相对画面中心偏差
+        # =========================
+        # 像素偏差
+        # =========================
         dx = cx - CENTER_X
         dy = cy - CENTER_Y
 
-        # 限幅（防止超int8）
-        dx = max(-DX_LIMIT, min(DX_LIMIT, dx))
-        dy = max(-DY_LIMIT, min(DY_LIMIT, dy))
+        # =========================
+        # 像素 -> 角度
+        # atan版本（更准确）
+        # =========================
+        angle_x = math.degrees(
+            math.atan(dx / focal_x)
+        )
 
-        # 滤波
-        dx = int(filter_x.update(dx))
-        dy = int(filter_y.update(dy))
+        angle_y = math.degrees(
+            math.atan(dy / focal_y)
+        )
+
+        # =========================
+        # 低通滤波（滤角度）
+        # =========================
+        angle_x = filter_x.update(angle_x)
+        angle_y = filter_y.update(angle_y)
+
+        # =========================
+        # 限幅
+        # =========================
+        angle_x = max(-45, min(45, angle_x))
+        angle_y = max(-35, min(35, angle_y))
+
+        # =========================
+        # 转int（串口发送需要）
+        # =========================
+        angle_x = int(angle_x)
+        angle_y = int(angle_y)
 
         # =========================
         # 类别判断
@@ -111,7 +138,7 @@ while not app.need_exit():
         # =========================
         # 发送串口
         # =========================
-        comm.send(mode, dx, dy)
+        comm.send(mode, angle_x, angle_y)
 
         # =========================
         # 调试显示
@@ -137,11 +164,11 @@ while not app.need_exit():
             color
         )
 
-        # 偏差显示
+        # 角度显示
         img.draw_string(
             2,
             2,
-            f"dx:{dx} dy:{dy}",
+            f"ax:{angle_x} ay:{angle_y}",
             image.COLOR_WHITE
         )
 
@@ -168,7 +195,9 @@ while not app.need_exit():
         image.COLOR_WHITE
     )
 
+    # =========================
     # FPS显示
+    # =========================
     img.draw_string(
         2,
         20,
