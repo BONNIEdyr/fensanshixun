@@ -32,9 +32,9 @@ typedef struct {
  *  包定义结构体
  * ============================================================ */
 typedef struct {
-    const PackStep_t *steps;        // 步骤数组
-    uint8_t           stepCount;    // 步骤数
-    uint8_t           repeatCount;  // 该包在切换到下一个包前，需要按键执行的次数
+    const PackStep_t *steps;                  // 步骤数组
+    uint8_t           stepCount;              // 步骤数
+    uint8_t           requiredTriggerCount;   // 该包在切换到下一个包前，需要按键触发的次数
 } Package_t;
 
 /* ============================================================

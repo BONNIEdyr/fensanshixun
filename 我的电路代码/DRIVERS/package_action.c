@@ -14,13 +14,13 @@ typedef enum {
 
 /* 执行器内部状态 */
 static struct {
-    PackState_t  state;             // 状态机状态
-    uint8_t      currentPkgIdx;     // 当前执行到第几个包 (0~7)
-    uint8_t      currentStepIdx;    // 当前执行到包内的第几步
-    uint8_t      currentRepeat;     // 当前重复计数
-    uint16_t     waitTimer;         // 延时/等待计时器 (tick)
-    uint8_t      busy;              // 忙标志
-    uint8_t      slideTriggered;    // 本步是否已触发了滑轨运动
+    PackState_t  state;                    // 状态机状态
+    uint8_t      currentPkgIdx;            // 当前执行到第几个包 (0~7)
+    uint8_t      currentStepIdx;           // 当前执行到包内的第几步
+    uint8_t      completedTriggerCount;    // 当前包已经完成的按键触发次数
+    uint16_t     waitTimer;                // 延时/等待计时器 (tick)
+    uint8_t      busy;                     // 忙标志
+    uint8_t      slideTriggered;           // 本步是否已触发了滑轨运动
 } g_pkg;
 
 /* ============================================================
@@ -263,13 +263,13 @@ static void Package_ExecuteStep(const PackStep_t *step)
 
 void Package_Init(void)
 {
-    g_pkg.state    = PACK_STATE_IDLE;
-    g_pkg.busy     = 0;
-    g_pkg.currentPkgIdx  = PACKAGE_COUNT - 1;
-    g_pkg.currentStepIdx = 0;
-    g_pkg.currentRepeat  = 0;
-    g_pkg.waitTimer      = 0;
-    g_pkg.slideTriggered = 0;
+    g_pkg.state                 = PACK_STATE_IDLE;
+    g_pkg.busy                  = 0;
+    g_pkg.currentPkgIdx         = PACKAGE_COUNT - 1;
+    g_pkg.currentStepIdx        = 0;
+    g_pkg.completedTriggerCount = 0;
+    g_pkg.waitTimer             = 0;
+    g_pkg.slideTriggered        = 0;
 }
 
 void Package_StartNext(void)
@@ -277,14 +277,14 @@ void Package_StartNext(void)
     if(g_pkg.busy) return;  // 正在执行，忽略
 
     /* 第一次启动或当前包已完成指定次数后，切换到下一个包 */
-    if(g_pkg.currentRepeat == 0 && g_pkg.currentStepIdx == 0 && g_pkg.waitTimer == 0)
+    if(g_pkg.completedTriggerCount == 0 && g_pkg.currentStepIdx == 0 && g_pkg.waitTimer == 0)
     {
         g_pkg.currentPkgIdx = (g_pkg.currentPkgIdx + 1) % PACKAGE_COUNT;
     }
-    else if(g_pkg.currentRepeat >= g_packages[g_pkg.currentPkgIdx].repeatCount)
+    else if(g_pkg.completedTriggerCount >= g_packages[g_pkg.currentPkgIdx].requiredTriggerCount)
     {
         g_pkg.currentPkgIdx = (g_pkg.currentPkgIdx + 1) % PACKAGE_COUNT;
-        g_pkg.currentRepeat = 0;
+        g_pkg.completedTriggerCount = 0;
     }
 
     g_pkg.currentStepIdx = 0;
@@ -309,7 +309,7 @@ void Package_Tick(void)
         {
             /* 当前包执行完一次，记录完成次数；
              * 这里不自动继续下一轮，下一次按键再触发。 */
-            g_pkg.currentRepeat++;
+            g_pkg.completedTriggerCount++;
             g_pkg.busy = 0;
             g_pkg.state = PACK_STATE_IDLE;
             return;
@@ -397,11 +397,11 @@ uint8_t Package_IsBusy(void)
 
 void Package_Stop(void)
 {
-    g_pkg.busy         = 0;
-    g_pkg.state        = PACK_STATE_IDLE;
-    g_pkg.waitTimer    = 0;
-    g_pkg.currentStepIdx = 0;
-    g_pkg.currentRepeat  = 0;
+    g_pkg.busy                  = 0;
+    g_pkg.state                 = PACK_STATE_IDLE;
+    g_pkg.waitTimer             = 0;
+    g_pkg.currentStepIdx        = 0;
+    g_pkg.completedTriggerCount = 0;
 }
 
 uint8_t Package_GetCurrentIndex(void)
