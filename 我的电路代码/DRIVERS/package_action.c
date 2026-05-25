@@ -226,6 +226,12 @@ static const Package_t g_packages[] = {
 };
 #define PACKAGE_COUNT   (sizeof(g_packages) / sizeof(g_packages[0]))  // = 8
 
+/* 托盘绝对位置别名：便于按角度语义做包内映射 */
+#define TRAY_POS_DEG_0    TRAY_POS_1
+#define TRAY_POS_DEG_90   TRAY_POS_2
+#define TRAY_POS_DEG_180  TRAY_POS_3
+#define TRAY_POS_DEG_270  TRAY_POS_4
+
 /* ============================================================
  *  内部函数：执行单步动作
  * ============================================================ */
@@ -234,6 +240,26 @@ static void Package_ExecuteStep(const PackStep_t *step)
     uint16_t claw = step->clawPos;
     uint16_t ptz  = step->ptzPos;
     uint16_t tray = step->trayPos;
+
+    /* 包2 / 包5 需要按触发次数映射到 90° / 180° / 270° 的托盘格位 */
+    if(tray != 0xFFFF)
+    {
+        if(g_pkg.currentPkgIdx == 2 || g_pkg.currentPkgIdx == 5)
+        {
+            switch(g_pkg.completedTriggerCount)
+            {
+            case 0:
+                tray = TRAY_POS_DEG_90;
+                break;
+            case 1:
+                tray = TRAY_POS_DEG_180;
+                break;
+            default:
+                tray = TRAY_POS_DEG_270;
+                break;
+            }
+        }
+    }
 
     /* 设置舵机（仅当值不为0xFFFF时执行） */
     if(claw != 0xFFFF) Servo_Claw_SetPulse(claw);
