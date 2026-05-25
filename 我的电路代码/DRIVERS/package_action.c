@@ -226,11 +226,16 @@ static const Package_t g_packages[] = {
 };
 #define PACKAGE_COUNT   (sizeof(g_packages) / sizeof(g_packages[0]))  // = 8
 
-/* 托盘绝对位置别名：便于按角度语义做包内映射 */
-#define TRAY_POS_DEG_0    TRAY_POS_4   /* 270° */
-#define TRAY_POS_DEG_90   TRAY_POS_1   /* 120° */
-#define TRAY_POS_DEG_180  TRAY_POS_2   /* 180° */
-#define TRAY_POS_DEG_270  TRAY_POS_3   /* 240° */
+/* 托盘绝对位置别名：便于按角度语义做包内映射
+ * TRAY_POS_1 (DEG_0)   = 一号托盘，绝对角度 120°
+ * TRAY_POS_2 (DEG_90)  = 二号托盘，绝对角度 180°
+ * TRAY_POS_3 (DEG_180) = 三号托盘，绝对角度 240°
+ * TRAY_POS_4 (DEG_270) = 第四次循环的极限位置，绝对角度 270°
+ */
+#define TRAY_POS_DEG_0    TRAY_POS_1
+#define TRAY_POS_DEG_90   TRAY_POS_2
+#define TRAY_POS_DEG_180  TRAY_POS_3
+#define TRAY_POS_DEG_270  TRAY_POS_4
 
 /* ============================================================
  *  内部函数：执行单步动作
