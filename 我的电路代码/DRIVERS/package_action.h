@@ -34,7 +34,7 @@ typedef struct {
 typedef struct {
     const PackStep_t *steps;        // 步骤数组
     uint8_t           stepCount;    // 步骤数
-    uint8_t           repeatCount;  // 重复次数（包2、3、5设为3）
+    uint8_t           repeatCount;  // 该包在切换到下一个包前，需要按键执行的次数
 } Package_t;
 
 /* ============================================================
@@ -47,8 +47,9 @@ typedef struct {
 void Package_Init(void);
 
 /**
- * @brief  启动下一个包（L1+L2按下时调用，自动循环）
- *         首次调用从包0开始，后续依次执行，包结束后回到包0
+ * @brief  启动包执行（L1+L2按下时调用）
+ *         每次调用只执行当前包的一次；
+ *         若该包配置了多次触发次数，则会保留当前包，直到触发次数满足后再切换到下一个包
  */
 void Package_StartNext(void);
 

@@ -105,7 +105,7 @@ static const PackStep_t g_steps_pkg2[] = {
     {PACK_STEP_END,     0, 0, 0, 0, 0},
 };
 
-/* ---------- 包3：夹取物料 → 云台转到托盘1号位 → 放到托盘1号位（重复3次）---------- */
+/* ---------- 包3：夹取物料 → 云台转到托盘1号位 → 放到托盘1号位---------- */
 static const PackStep_t g_steps_pkg3[] = {
     // 1. 滑轨从过渡位下降到物料夹取位（绝对位置8000）
     {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_GRAB,              60},
@@ -217,10 +217,10 @@ static const PackStep_t g_steps_pkg7[] = {
 static const Package_t g_packages[] = {
     {g_steps_pkg0, sizeof(g_steps_pkg0)/sizeof(PackStep_t), 1},  // 包0 - 夹取→放托盘3号位
     {g_steps_pkg1, sizeof(g_steps_pkg1)/sizeof(PackStep_t), 1},  // 包1 - 夹取→放托盘2号位
-    {g_steps_pkg2, sizeof(g_steps_pkg2)/sizeof(PackStep_t), 3},  // 包2 - 夹取→放托盘2号位（重复3次）
-    {g_steps_pkg3, sizeof(g_steps_pkg3)/sizeof(PackStep_t), 3},  // 包3 - 夹取→放托盘1号位（重复3次）
+    {g_steps_pkg2, sizeof(g_steps_pkg2)/sizeof(PackStep_t), 3},  // 包2 - 夹取→放托盘2号位（按3次进入下一个包）
+    {g_steps_pkg3, sizeof(g_steps_pkg3)/sizeof(PackStep_t), 1},  // 包3 - 夹取→放托盘1号位（按1次进入下一个包）
     {g_steps_pkg4, sizeof(g_steps_pkg4)/sizeof(PackStep_t), 1},  // 包4 - 从托盘1取料→放到物料放置位7cm
-    {g_steps_pkg5, sizeof(g_steps_pkg5)/sizeof(PackStep_t), 3},  // 包5 - 从托盘2取料→放到物料放置位置（重复3次）
+    {g_steps_pkg5, sizeof(g_steps_pkg5)/sizeof(PackStep_t), 3},  // 包5 - 从托盘2取料→放到物料放置位置（按3次进入下一个包）
     {g_steps_pkg6, sizeof(g_steps_pkg6)/sizeof(PackStep_t), 1},  // 包6 - 从托盘2取料→放到物料放置位
     {g_steps_pkg7, sizeof(g_steps_pkg7)/sizeof(PackStep_t), 1},  // 包7 - 从托盘3取料→放到物料放置位置
 };
@@ -265,7 +265,7 @@ void Package_Init(void)
 {
     g_pkg.state    = PACK_STATE_IDLE;
     g_pkg.busy     = 0;
-    g_pkg.currentPkgIdx  = 0;
+    g_pkg.currentPkgIdx  = PACKAGE_COUNT - 1;
     g_pkg.currentStepIdx = 0;
     g_pkg.currentRepeat  = 0;
     g_pkg.waitTimer      = 0;
@@ -276,17 +276,22 @@ void Package_StartNext(void)
 {
     if(g_pkg.busy) return;  // 正在执行，忽略
 
-    /* 启动下一个包，满8个后回到0 */
-    g_pkg.currentPkgIdx = (g_pkg.currentPkgIdx + 1) % PACKAGE_COUNT;
+    /* 第一次启动或当前包已完成指定次数后，切换到下一个包 */
+    if(g_pkg.currentRepeat == 0 && g_pkg.currentStepIdx == 0 && g_pkg.waitTimer == 0)
+    {
+        g_pkg.currentPkgIdx = (g_pkg.currentPkgIdx + 1) % PACKAGE_COUNT;
+    }
+    else if(g_pkg.currentRepeat >= g_packages[g_pkg.currentPkgIdx].repeatCount)
+    {
+        g_pkg.currentPkgIdx = (g_pkg.currentPkgIdx + 1) % PACKAGE_COUNT;
+        g_pkg.currentRepeat = 0;
+    }
+
     g_pkg.currentStepIdx = 0;
-    g_pkg.currentRepeat  = 0;
     g_pkg.waitTimer      = 0;
     g_pkg.slideTriggered = 0;
     g_pkg.busy = 1;
     g_pkg.state = PACK_STATE_IDLE;
-
-    /* 立即开始第一步 */
-    /* 注意：第0步在下一个 Tick 中执行，确保状态机稳定 */
 }
 
 void Package_Tick(void)
@@ -302,21 +307,12 @@ void Package_Tick(void)
         /* 检查当前步骤是否为END */
         if(step->type == PACK_STEP_END)
         {
-            /* 当前包结束，处理重复 */
+            /* 当前包执行完一次，记录完成次数；
+             * 这里不自动继续下一轮，下一次按键再触发。 */
             g_pkg.currentRepeat++;
-            if(g_pkg.currentRepeat < pkg->repeatCount)
-            {
-                /* 还有重复次数，回到第0步重新执行 */
-                g_pkg.currentStepIdx = 0;
-                step = &pkg->steps[0];
-            }
-            else
-            {
-                /* 包全部完成 → 进入空闲 */
-                g_pkg.busy = 0;
-                g_pkg.currentRepeat = 0;
-                return;
-            }
+            g_pkg.busy = 0;
+            g_pkg.state = PACK_STATE_IDLE;
+            return;
         }
 
         /* 执行当前步骤 */
@@ -401,9 +397,11 @@ uint8_t Package_IsBusy(void)
 
 void Package_Stop(void)
 {
-    g_pkg.busy  = 0;
-    g_pkg.state = PACK_STATE_IDLE;
-    g_pkg.waitTimer = 0;
+    g_pkg.busy         = 0;
+    g_pkg.state        = PACK_STATE_IDLE;
+    g_pkg.waitTimer    = 0;
+    g_pkg.currentStepIdx = 0;
+    g_pkg.currentRepeat  = 0;
 }
 
 uint8_t Package_GetCurrentIndex(void)
