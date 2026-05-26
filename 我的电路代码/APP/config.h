@@ -152,6 +152,11 @@
 #define CLAW_POS_GRIP             250             /* 夹取位（0°） */
 #define CLAW_POS_RELEASE          583             /* 放料位（60°） */
 
+/* ----- 舵机初始化位置 ----- */
+#define CLAW_INIT_POS             250             /* 夹爪初始位置（0°） */
+#define PTZ_INIT_POS              917             /* 云台初始位置（180°） */
+#define TRAY_INIT_POS             417             /* 托盘初始位置（45°） */
+
 /* ----- 云台（PC7, 270°舵机）位置 ----- */
 #define PTZ_POS_GRIP              250             /* 夹取位（0°） */
 #define PTZ_POS_TRAY1             694             /* 托盘位1（120°） */

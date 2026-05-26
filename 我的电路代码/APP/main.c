@@ -136,10 +136,10 @@ int main(void)
 	board_init();
 	Servo_PWM_Init();            // 初始化TIM8舵机PWM（PC6_CH1/PC7_CH2/PC8_CH3）
 	
-	// 上电设置舵机初始位置：夹爪放料位60°，云台托盘位2(180°)，托盘1号位(0°)
-	Servo_Claw_SetPulse(CLAW_POS_RELEASE);
-	Servo_PTZ_SetPulse(PTZ_POS_TRAY2);
-	Servo_Tray_SetPulse(TRAY_POS_1);
+	// 上电设置舵机初始位置：夹爪0°，云台180°，托盘45°
+	Servo_Claw_SetPulse(CLAW_INIT_POS);
+	Servo_PTZ_SetPulse(PTZ_INIT_POS);
+	Servo_Tray_SetPulse(TRAY_INIT_POS);
 	
 	PS2_Init();
 	Package_Init();               // 初始化包执行器
@@ -159,7 +159,7 @@ int main(void)
 		SLIDE_ADDR,        // 地址5
 		1,                 // svF=1 存储（每次上电都回零）
 		2,                 // o_mode=2 多圈无限位碰撞回零
-		0,                 // o_dir=0 CW方向走到底部
+		0,                 // o_dir=0 向下走到底部
 		SLIDE_HOMING_VEL,  // 回零速度200RPM
 		SLIDE_HOMING_TIMEOUT_MS, // 超时5秒
 		SLIDE_SL_VEL,      // 碰撞检测转速50RPM
@@ -181,8 +181,8 @@ int main(void)
 	Emm_V5_Stop_Now(SLIDE_ADDR, 0);
 	delay_ms(MOTOR_CMD_DELAY_MS);
 	/* ===== 滑轨电机5上电后运动到过渡位（绝对位置模式 raF=1） ===== */
-	Emm_V5_Pos_Control(SLIDE_ADDR, 0, SLIDE_POS_VEL, SLIDE_POS_ACC,
-	                   SLIDE_POS_TRANSIT, 0, 1);  // raF=1 绝对位置模式 → 上升到过渡位15cm
+	Emm_V5_Pos_Control(SLIDE_ADDR, 1, SLIDE_POS_VEL, SLIDE_POS_ACC,
+	                   SLIDE_POS_TRANSIT, 0, 1);  // raF=1 绝对位置模式 dir=1向零位上方 → 上升到过渡位15cm
 	delay_ms(SLIDE_MOVE_WAIT_MS);  // 等待运动完成（上电这里暂保留固定延时）
 
 	while(1)
@@ -212,12 +212,19 @@ int main(void)
 			continue;
 		}
 
-		// 2. 解锁逻辑：按下 START 键
+		// 2. 解锁逻辑：按下 START 键 → 舵机复位准备
 		if(ps2ControlEnabled == 0)
 		{
 			Motor_AllStop(motorAddr);
 			if(joystick.btn1 & PS2_BTN_START)
 			{
+				// 云台从180°回到0°夹取位
+				Servo_PTZ_SetPulse(PTZ_POS_GRIP);
+				// 托盘从45°回到0°
+				Servo_Tray_SetPulse(TRAY_PWM_MIN);
+				// 夹爪从闭合位张开
+				Servo_Claw_SetPulse(CLAW_POS_RELEASE);
+				delay_ms(500);  // 等待舵机运动到位
 				ps2ControlEnabled = 1;
 			}
 			zeroStopArmed = 0;
