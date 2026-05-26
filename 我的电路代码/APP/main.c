@@ -157,9 +157,9 @@ int main(void)
 	/* ===== 滑轨电机5上电自动回零 ===== */
 	Emm_V5_Origin_Modify_Params(
 		SLIDE_ADDR,        // 地址5
-		1,                 // svF=1 存储（每次上电都回零）
+		0,                 // svF=1 存储（每次上电都回零）
 		2,                 // o_mode=2 多圈无限位碰撞回零
-		0,                 // o_dir=0 向下走到底部
+		0,                 // o_dir=0 ，CW顺时针向下找零点
 		SLIDE_HOMING_VEL,  // 回零速度200RPM
 		SLIDE_HOMING_TIMEOUT_MS, // 超时5秒
 		SLIDE_SL_VEL,      // 碰撞检测转速50RPM
@@ -182,7 +182,7 @@ int main(void)
 	delay_ms(MOTOR_CMD_DELAY_MS);
 	/* ===== 滑轨电机5上电后运动到过渡位（绝对位置模式 raF=1） ===== */
 	Emm_V5_Pos_Control(SLIDE_ADDR, 1, SLIDE_POS_VEL, SLIDE_POS_ACC,
-	                   SLIDE_POS_TRANSIT, 0, 1);  // raF=1 绝对位置模式 dir=1向零位上方 → 上升到过渡位15cm
+	                   SLIDE_POS_TRANSIT, 1, 1);  // raF=1 绝对位置模式 dir=1向零位上方 → 上升到过渡位15cm
 	delay_ms(SLIDE_MOVE_WAIT_MS);  // 等待运动完成（上电这里暂保留固定延时）
 
 	while(1)

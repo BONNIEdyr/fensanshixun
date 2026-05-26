@@ -279,7 +279,7 @@ static void Package_ExecuteStep(const PackStep_t *step)
         uint32_t pulses = (uint32_t)step->slidePulses;
 
         Emm_V5_Pos_Control(SLIDE_ADDR, 1, SLIDE_POS_VEL, SLIDE_POS_ACC,
-                           pulses, 0, 1);  // raF=1 绝对位置模式 dir=1向零位上方（正方向）
+                           pulses, 1, 1);  // raF=1 绝对位置模式 dir=1向零位上方（正方向）
         g_pkg.slideTriggered = 1;  // 标记有滑轨运动等待完成
     }
     else

@@ -1,6 +1,6 @@
 Dependencies for Project 'STM32_UART_CMD', Target 'STM32_PUL_WHILE': (DO NOT MODIFY !)
 CompilerVersion: 5060960::V5.06 update 7 (build 960)::.\ARMCC
-F (..\APP\main.c)(0x6A15CCE0)(--c99 --gnu -c --cpu Cortex-M3 -D__EVAL -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ..\APP -I ..\BSP -I ..\CMSIS -I ..\LIB\STM32F10x_StdPeriph_Lib_V3.5.0\inc -I ..\DRIVERS-ID:\Packs\Keil\STM32F1xx_DFP\2.4.1\Device\Include-D__UVISION_VERSION="536" -DSTM32F10X_HD -DSTM32F10X_HD -DUSE_STDPERIPH_DRIVER-o .\objects\main.o --omf_browse .\objects\main.crf --depend .\objects\main.d)
+F (..\APP\main.c)(0x6A15D1E3)(--c99 --gnu -c --cpu Cortex-M3 -D__EVAL -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ..\APP -I ..\BSP -I ..\CMSIS -I ..\LIB\STM32F10x_StdPeriph_Lib_V3.5.0\inc -I ..\DRIVERS-ID:\Packs\Keil\STM32F1xx_DFP\2.4.1\Device\Include-D__UVISION_VERSION="536" -DSTM32F10X_HD -DSTM32F10X_HD -DUSE_STDPERIPH_DRIVER-o .\objects\main.o --omf_browse .\objects\main.crf --depend .\objects\main.d)
 I (..\BSP\board.h)(0x6A13B7D8)
 I (..\CMSIS\stm32f10x.h)(0x6A13B7D8)
 I (..\CMSIS\core_cm3.h)(0x6A13B7D8)
@@ -158,7 +158,7 @@ I (..\LIB\STM32F10x_StdPeriph_Lib_V3.5.0\inc\stm32f10x_usart.h)(0x6A13B7D8)
 I (..\LIB\STM32F10x_StdPeriph_Lib_V3.5.0\inc\misc.h)(0x6A13B7D8)
 I (..\APP\config.h)(0x6A15C658)
 F (..\DRIVERS\servo_pwm.h)(0x6A13B7D8)()
-F (..\DRIVERS\package_action.c)(0x6A15CCFA)(--c99 --gnu -c --cpu Cortex-M3 -D__EVAL -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ..\APP -I ..\BSP -I ..\CMSIS -I ..\LIB\STM32F10x_StdPeriph_Lib_V3.5.0\inc -I ..\DRIVERS-ID:\Packs\Keil\STM32F1xx_DFP\2.4.1\Device\Include-D__UVISION_VERSION="536" -DSTM32F10X_HD -DSTM32F10X_HD -DUSE_STDPERIPH_DRIVER-o .\objects\package_action.o --omf_browse .\objects\package_action.crf --depend .\objects\package_action.d)
+F (..\DRIVERS\package_action.c)(0x6A15D1F9)(--c99 --gnu -c --cpu Cortex-M3 -D__EVAL -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ..\APP -I ..\BSP -I ..\CMSIS -I ..\LIB\STM32F10x_StdPeriph_Lib_V3.5.0\inc -I ..\DRIVERS-ID:\Packs\Keil\STM32F1xx_DFP\2.4.1\Device\Include-D__UVISION_VERSION="536" -DSTM32F10X_HD -DSTM32F10X_HD -DUSE_STDPERIPH_DRIVER-o .\objects\package_action.o --omf_browse .\objects\package_action.crf --depend .\objects\package_action.d)
 I (..\DRIVERS\package_action.h)(0x6A13B7EB)
 I (..\CMSIS\stm32f10x.h)(0x6A13B7D8)
 I (..\CMSIS\core_cm3.h)(0x6A13B7D8)
