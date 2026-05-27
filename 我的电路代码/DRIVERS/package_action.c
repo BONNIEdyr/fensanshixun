@@ -171,23 +171,15 @@ static const PackStep_t g_steps_pkg5[] = {
 
 /* ---------- 包6：从托盘2取料 → 放到物料放置位置--------- */
 static const PackStep_t g_steps_pkg6[] = {
-    // 2. 滑轨下降到托盘放置位13cm（绝对位置10400）
+    {PACK_STEP_SERVO,   0xFFFF,          0xFFFF,        TRAY_POS_DEG_0, 0,                           20},
     {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_TRAY_PLACE,        40},
-    // 3. 夹爪夹取
     {PACK_STEP_SERVO,   CLAW_POS_GRIP,   0xFFFF,        0xFFFF,      0,                           15},
-    // 4. 滑轨回到过渡位（绝对位置12000）
     {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_TRANSIT,           60},
-    // 5. 云台转回夹取位，只动云台
     {PACK_STEP_SERVO,   0xFFFF,          PTZ_POS_GRIP,  0xFFFF,      0,                           25},
-    // 6. 滑轨下降到物料放置位7cm（绝对位置5600）
     {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_PLACE,             70},
-    // 7. 夹爪放料
     {PACK_STEP_SERVO,   CLAW_POS_RELEASE, 0xFFFF,       0xFFFF,      0,                           15},
-    // 8. 滑轨回过渡位（绝对位置12000）
     {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_TRANSIT,           70},
-    // 9. 云台转到托盘3号位
     {PACK_STEP_SERVO,   0xFFFF,          PTZ_POS_TRAY3, 0xFFFF,      0,                           25},
-    // 结束
     {PACK_STEP_END,     0, 0, 0, 0, 0},
 };
 
@@ -247,21 +239,18 @@ static void Package_ExecuteStep(const PackStep_t *step)
     uint16_t tray = step->trayPos;
 
     /* 包2 / 包5 需要按触发次数映射到 90° / 180° / 270° 的托盘格位 */
-    if(tray != 0xFFFF)
-    {
-        if(g_pkg.currentPkgIdx == 2 || g_pkg.currentPkgIdx == 5)
-        {
-            switch(g_pkg.completedTriggerCount)
-            {
-            case 0:
-                tray = TRAY_POS_DEG_90;
-                break;
-            case 1:
-                tray = TRAY_POS_DEG_180;
-                break;
-            default:
-                tray = TRAY_POS_DEG_270;
-                break;
+    if(tray != 0xFFFF) {
+        if(g_pkg.currentPkgIdx == 2) {
+            switch(g_pkg.completedTriggerCount) {
+            case 0: tray = TRAY_POS_DEG_90;  break;
+            case 1: tray = TRAY_POS_DEG_180; break;
+            default: tray = TRAY_POS_DEG_270; break;
+            }
+        } else if(g_pkg.currentPkgIdx == 5) {
+            switch(g_pkg.completedTriggerCount) {
+            case 0: tray = TRAY_POS_DEG_270; break;
+            case 1: tray = TRAY_POS_DEG_180; break;
+            default: tray = TRAY_POS_DEG_90;  break;
             }
         }
     }
@@ -296,11 +285,14 @@ void Package_Init(void)
 {
     g_pkg.state                 = PACK_STATE_IDLE;
     g_pkg.busy                  = 0;
-    g_pkg.currentPkgIdx         = PACKAGE_COUNT - 1;
+    g_pkg.currentPkgIdx         = 0; // 初始化为包0
     g_pkg.currentStepIdx        = 0;
     g_pkg.completedTriggerCount = 0;
     g_pkg.waitTimer             = 0;
     g_pkg.slideTriggered        = 0;
+
+    /* 上电瞬间：仅执行一次，将托盘舵机强行归零 */
+    Servo_Tray_SetPulse(TRAY_POS_DEG_0);
 }
 
 void Package_StartNext(void)
