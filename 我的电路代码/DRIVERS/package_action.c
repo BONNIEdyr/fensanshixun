@@ -290,9 +290,6 @@ void Package_Init(void)
     g_pkg.completedTriggerCount = 0;
     g_pkg.waitTimer             = 0;
     g_pkg.slideTriggered        = 0;
-
-    /* 上电瞬间：仅执行一次，将托盘舵机强行归零 */
-    Servo_Tray_SetPulse(TRAY_POS_DEG_0);
 }
 
 void Package_StartNext(void)
