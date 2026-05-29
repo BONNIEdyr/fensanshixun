@@ -15,7 +15,7 @@ typedef enum {
 /* 执行器内部状态 */
 static struct {
     PackState_t  state;                    // 状态机状态
-    uint8_t      currentPkgIdx;            // 当前执行到第几个包 (0~7)
+    uint8_t      currentPkgIdx;            // 当前执行到第几个包 (0~5)
     uint8_t      currentStepIdx;           // 当前执行到包内的第几步
     uint8_t      completedTriggerCount;    // 当前包已经完成的按键触发次数
     uint16_t     waitTimer;                // 延时/等待计时器 (tick)
@@ -23,8 +23,12 @@ static struct {
     uint8_t      slideTriggered;           // 本步是否已触发了滑轨运动
 } g_pkg;
 
+#define TRAY_POS_DYNAMIC 0xFFFE
+
 /* ============================================================
- *  包0 ~ 包7 的步骤定义
+ *  包动作步骤定义
+ *  本文件包含若干包的步骤数组，当前离散调用表仅使用6个具体包：
+ *    LOAD_TRAY_1/2/3 与 UNLOAD_TRAY_1/2/3
  *  注释格式：
  *    // N. 动作描述
  *  滑轨4个高度：过渡位15cm / 托盘放置位13cm / 物料夹取位10cm / 物料放置位7cm
@@ -39,7 +43,7 @@ static struct {
  *   所有滑轨控制使用绝对位置模式 (raF=1)
  * ============================================================ */
 
-/* ---------- 包0：夹取物料 → 云台转到托盘3号位 → 放到托盘3号位 ---------- */
+/* ---------- LOAD_TRAY_3：夹取物料 → 云台转到托盘3号位 → 放到托盘3号位 ---------- */
 static const PackStep_t g_steps_pkg0[] = { 
     // 1. 滑轨从过渡位下降到物料夹取位（绝对位置8000）
     {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_GRAB,              60},
@@ -61,7 +65,7 @@ static const PackStep_t g_steps_pkg0[] = {
     {PACK_STEP_END,     0, 0, 0, 0, 0},
 };
 
-/* ---------- 包1：夹取物料 → 云台转到托盘2号位 → 放到托盘2号位 ---------- */
+/* ---------- LOAD_TRAY_2：夹取物料 → 云台转到托盘2号位 → 放到托盘2号位 ---------- */
 static const PackStep_t g_steps_pkg1[] = {
     // 1. 滑轨从过渡位下降到物料夹取位（绝对位置8000）
     {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_GRAB,              60},
@@ -69,8 +73,8 @@ static const PackStep_t g_steps_pkg1[] = {
     {PACK_STEP_SERVO,   CLAW_POS_GRIP,   0xFFFF,        0xFFFF,      0,                           15},
     // 3. 滑轨从夹取位回到过渡位（绝对位置12000）
     {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_TRANSIT,           60},
-    // 4. 云台转到托盘位2，只动云台舵机，别的舵机不动
-    {PACK_STEP_SERVO,   0xFFFF,          PTZ_POS_TRAY2, 0xFFFF,      0,                           25},
+    // 4. 云台转到托盘位2，同时根据当前选择动态设置托盘舵机角度
+    {PACK_STEP_SERVO,   0xFFFF,          PTZ_POS_TRAY2, TRAY_POS_DYNAMIC, 0,                        25},
     // 5. 滑轨从过渡位下降到物料托盘放置位（绝对位置10400）
     {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_TRAY_PLACE,        40},
     // 6. 夹爪从零位回到张开位放料
@@ -83,29 +87,7 @@ static const PackStep_t g_steps_pkg1[] = {
     {PACK_STEP_END,     0, 0, 0, 0, 0},
 };
 
-/* ---------- 包2：夹取物料 → 云台转到托盘2号位 → 放到托盘2号位（重复3次）---------- */
-static const PackStep_t g_steps_pkg2[] = {
-    // 1. 滑轨从过渡位下降到物料夹取位（绝对位置8000）
-    {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_GRAB,              60},
-    // 2. 夹爪从张开位回到零位夹取
-    {PACK_STEP_SERVO,   CLAW_POS_GRIP,   0xFFFF,        0xFFFF,      0,                           15},
-    // 3. 滑轨从夹取位回到过渡位（绝对位置12000）
-    {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_TRANSIT,           60},
-    // 4. 云台转到托盘位2，同时托盘舵机转动90度
-    {PACK_STEP_SERVO,   0xFFFF,          PTZ_POS_TRAY2, TRAY_POS_2,  0,                           25},
-    // 5. 滑轨从过渡位下降到物料托盘放置位（绝对位置10400）
-    {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_TRAY_PLACE,        40},
-    // 6. 夹爪从零位回到张开位放料
-    {PACK_STEP_SERVO,   CLAW_POS_RELEASE, 0xFFFF,       0xFFFF,      0,                           15},
-    // 7. 滑轨回到过渡位（绝对位置12000）
-    {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_TRANSIT,           60},
-    // 8. 云台转回夹取位，别的舵机不动
-    {PACK_STEP_SERVO,   0xFFFF,          PTZ_POS_GRIP,  0xFFFF,      0,                           25},
-    // 结束
-    {PACK_STEP_END,     0, 0, 0, 0, 0},
-};
-
-/* ---------- 包3：夹取物料 → 云台转到托盘1号位 → 放到托盘1号位---------- */
+/* ---------- LOAD_TRAY_1：夹取物料 → 云台转到托盘1号位 → 放到托盘1号位---------- */
 static const PackStep_t g_steps_pkg3[] = {
     // 1. 滑轨从过渡位下降到物料夹取位（绝对位置8000）
     {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_GRAB,              60},
@@ -125,7 +107,7 @@ static const PackStep_t g_steps_pkg3[] = {
     {PACK_STEP_END,     0, 0, 0, 0, 0},
 };
 
-/* ---------- 包4：从托盘1取料 → 放到物料放置位7cm 云台转到2号位---------- */
+/* ---------- UNLOAD_TRAY_1：从托盘1取料 → 放到物料放置位7cm 云台转到2号位---------- */
 static const PackStep_t g_steps_pkg4[] = {
     // 2. 滑轨从过渡位下降到物料托盘放置位13cm（绝对位置10400）
     {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_TRAY_PLACE,        40},
@@ -147,31 +129,9 @@ static const PackStep_t g_steps_pkg4[] = {
     {PACK_STEP_END,     0, 0, 0, 0, 0},
 };
 
-/* ---------- 包5：从托盘2取料 → 放到物料放置位置 → 重复三次---------- */
-static const PackStep_t g_steps_pkg5[] = {
-    // 2. 滑轨从过渡位下降到物料托盘放置位13cm（绝对位置10400）
-    {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_TRAY_PLACE,        40},
-    // 3. 夹爪从张开位回到零位夹取
-    {PACK_STEP_SERVO,   CLAW_POS_GRIP,   0xFFFF,        0xFFFF,      0,                           15},
-    // 4. 滑轨从托盘放置位回到过渡位（绝对位置12000）
-    {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_TRANSIT,           60},
-    // 5. 云台转到夹取位，同时托盘舵机反方向转动90度
-    {PACK_STEP_SERVO,   0xFFFF,          PTZ_POS_GRIP,  TRAY_POS_1,  0,                           25},
-    // 6. 滑轨从过渡位下降到物料放置位7cm（绝对位置5600）
-    {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_PLACE,             70},
-    // 7. 夹爪从零位回到张开位放料
-    {PACK_STEP_SERVO,   CLAW_POS_RELEASE, 0xFFFF,       0xFFFF,      0,                           15},
-    // 8. 滑轨回到过渡位（绝对位置12000）
-    {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_TRANSIT,           70},
-    // 9. 云台转回2号位
-    {PACK_STEP_SERVO,   0xFFFF,          PTZ_POS_TRAY2, 0xFFFF,      0,                           25},
-    // 结束
-    {PACK_STEP_END,     0, 0, 0, 0, 0},
-};
-
-/* ---------- 包6：从托盘2取料 → 放到物料放置位置--------- */
+/* ---------- UNLOAD_TRAY_2：从托盘2取料 → 放到物料放置位置--------- */
 static const PackStep_t g_steps_pkg6[] = {
-    {PACK_STEP_SERVO,   0xFFFF,          0xFFFF,        TRAY_POS_DEG_0, 0,                           20},
+    {PACK_STEP_SERVO,   0xFFFF,          0xFFFF,        TRAY_POS_DYNAMIC, 0,                      20},
     {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_TRAY_PLACE,        40},
     {PACK_STEP_SERVO,   CLAW_POS_GRIP,   0xFFFF,        0xFFFF,      0,                           15},
     {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_TRANSIT,           60},
@@ -183,7 +143,7 @@ static const PackStep_t g_steps_pkg6[] = {
     {PACK_STEP_END,     0, 0, 0, 0, 0},
 };
 
-/* ---------- 包7：从托盘3取料 → 放到物料放置位置---------- */
+/* ---------- UNLOAD_TRAY_3：从托盘3取料 → 放到物料放置位置---------- */
 static const PackStep_t g_steps_pkg7[] = {
     // 1. 滑轨下降到托盘放置位13cm（从托盘3取料，绝对位置10400）
     {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_TRAY_PLACE,        40},
@@ -207,16 +167,14 @@ static const PackStep_t g_steps_pkg7[] = {
  *  包注册表：所有包的汇总
  * ============================================================ */
 static const Package_t g_packages[] = {
-    {g_steps_pkg0, sizeof(g_steps_pkg0)/sizeof(PackStep_t), 1},  // 包0 - 夹取→放托盘3号位
-    {g_steps_pkg1, sizeof(g_steps_pkg1)/sizeof(PackStep_t), 1},  // 包1 - 夹取→放托盘2号位
-    {g_steps_pkg2, sizeof(g_steps_pkg2)/sizeof(PackStep_t), 3},  // 包2 - 夹取→放托盘2号位（按3次进入下一个包）
-    {g_steps_pkg3, sizeof(g_steps_pkg3)/sizeof(PackStep_t), 1},  // 包3 - 夹取→放托盘1号位（按1次进入下一个包）
-    {g_steps_pkg4, sizeof(g_steps_pkg4)/sizeof(PackStep_t), 1},  // 包4 - 从托盘1取料→放到物料放置位7cm
-    {g_steps_pkg5, sizeof(g_steps_pkg5)/sizeof(PackStep_t), 3},  // 包5 - 从托盘2取料→放到物料放置位置（按3次进入下一个包）
-    {g_steps_pkg6, sizeof(g_steps_pkg6)/sizeof(PackStep_t), 1},  // 包6 - 从托盘2取料→放到物料放置位
-    {g_steps_pkg7, sizeof(g_steps_pkg7)/sizeof(PackStep_t), 1},  // 包7 - 从托盘3取料→放到物料放置位置
+    {g_steps_pkg3, sizeof(g_steps_pkg3)/sizeof(PackStep_t), 1},  // LOAD_TRAY_1
+    {g_steps_pkg1, sizeof(g_steps_pkg1)/sizeof(PackStep_t), 1},  // LOAD_TRAY_2
+    {g_steps_pkg0, sizeof(g_steps_pkg0)/sizeof(PackStep_t), 1},  // LOAD_TRAY_3
+    {g_steps_pkg4, sizeof(g_steps_pkg4)/sizeof(PackStep_t), 1},  // UNLOAD_TRAY_1
+    {g_steps_pkg6, sizeof(g_steps_pkg6)/sizeof(PackStep_t), 1},  // UNLOAD_TRAY_2
+    {g_steps_pkg7, sizeof(g_steps_pkg7)/sizeof(PackStep_t), 1},  // UNLOAD_TRAY_3
 };
-#define PACKAGE_COUNT   (sizeof(g_packages) / sizeof(g_packages[0]))  // = 8
+#define PACKAGE_COUNT   (sizeof(g_packages) / sizeof(g_packages[0]))  // = 6
 
 /* 托盘绝对位置别名：便于按角度语义做包内映射
  * TRAY_POS_1 (DEG_0)   = 一号托盘，绝对角度 120°
@@ -224,10 +182,10 @@ static const Package_t g_packages[] = {
  * TRAY_POS_3 (DEG_180) = 三号托盘，绝对角度 240°
  * TRAY_POS_4 (DEG_270) = 第四次循环的极限位置，绝对角度 270°
  */
-#define TRAY_POS_DEG_0    TRAY_POS_1
-#define TRAY_POS_DEG_90   TRAY_POS_2
-#define TRAY_POS_DEG_180  TRAY_POS_3
-#define TRAY_POS_DEG_270  TRAY_POS_4
+
+
+/* 当前二号托盘目标角度，外部可手动覆写 */
+uint16_t g_Tray2_CurrentAngle = TRAY_POS_DEG_0;
 
 /* ============================================================
  *  内部函数：执行单步动作
@@ -258,6 +216,10 @@ static void Package_ExecuteStep(const PackStep_t *step)
     /* 设置舵机（仅当值不为0xFFFF时执行） */
     if(claw != 0xFFFF) Servo_Claw_SetPulse(claw);
     if(ptz  != 0xFFFF) Servo_PTZ_SetPulse(ptz);
+    if(tray == TRAY_POS_DYNAMIC) {
+        tray = g_Tray2_CurrentAngle;
+    }
+
     if(tray != 0xFFFF) Servo_Tray_SetPulse(tray);
 
     /* 设置滑轨（仅当不为0时执行）- 绝对位置模式 raF=1 */
@@ -292,26 +254,19 @@ void Package_Init(void)
     g_pkg.slideTriggered        = 0;
 }
 
-void Package_StartNext(void)
+void Package_Start(PackID_t id)
 {
     if(g_pkg.busy) return;  // 正在执行，忽略
 
-    /* 第一次启动或当前包已完成指定次数后，切换到下一个包 */
-    if(g_pkg.completedTriggerCount == 0 && g_pkg.currentStepIdx == 0 && g_pkg.waitTimer == 0)
-    {
-        g_pkg.currentPkgIdx = (g_pkg.currentPkgIdx + 1) % PACKAGE_COUNT;
-    }
-    else if(g_pkg.completedTriggerCount >= g_packages[g_pkg.currentPkgIdx].requiredTriggerCount)
-    {
-        g_pkg.currentPkgIdx = (g_pkg.currentPkgIdx + 1) % PACKAGE_COUNT;
-        g_pkg.completedTriggerCount = 0;
-    }
+    if(id >= PACKAGE_COUNT) return;
 
-    g_pkg.currentStepIdx = 0;
-    g_pkg.waitTimer      = 0;
-    g_pkg.slideTriggered = 0;
-    g_pkg.busy = 1;
-    g_pkg.state = PACK_STATE_IDLE;
+    g_pkg.currentPkgIdx         = (uint8_t)id;
+    g_pkg.currentStepIdx        = 0;
+    g_pkg.completedTriggerCount = 0;
+    g_pkg.waitTimer             = 0;
+    g_pkg.slideTriggered        = 0;
+    g_pkg.busy                  = 1;
+    g_pkg.state                 = PACK_STATE_IDLE;
 }
 
 void Package_Tick(void)
@@ -413,6 +368,12 @@ void Package_Tick(void)
 uint8_t Package_IsBusy(void)
 {
     return g_pkg.busy;
+}
+
+void Set_Tray2_Target_Angle(uint16_t pwm_angle)
+{
+    g_Tray2_CurrentAngle = pwm_angle;
+    Servo_Tray_SetPulse(g_Tray2_CurrentAngle);
 }
 
 void Package_Stop(void)

@@ -3,6 +3,10 @@
 
 #include "stm32f10x.h"
 
+#define TRAY_POS_DEG_0    250
+#define TRAY_POS_DEG_90   583
+#define TRAY_POS_DEG_180  917
+#define TRAY_POS_DEG_270  1250
 /* ============================================================
  *  包动作步骤类型
  * ============================================================ */
@@ -47,11 +51,26 @@ typedef struct {
 void Package_Init(void);
 
 /**
- * @brief  启动包执行（L1+L2按下时调用）
- *         每次调用只执行当前包的一次；
- *         若该包配置了多次触发次数，则会保留当前包，直到触发次数满足后再切换到下一个包
+ * @brief  包ID类型：用于离散调用单次执行包
  */
-void Package_StartNext(void);
+typedef enum {
+    LOAD_TRAY_1 = 0,
+    LOAD_TRAY_2,
+    LOAD_TRAY_3,
+    UNLOAD_TRAY_1,
+    UNLOAD_TRAY_2,
+    UNLOAD_TRAY_3,
+} PackID_t;
+
+/**
+ * @brief  启动指定单次执行包
+ */
+void Package_Start(PackID_t id);
+
+/**
+ * @brief  覆写二号托盘目标角度并立即驱动托盘舵机
+ */
+void Set_Tray2_Target_Angle(uint16_t pwm_angle);
 
 /**
  * @brief  主循环中周期性调用，驱动包按步骤执行

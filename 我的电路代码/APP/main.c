@@ -7,6 +7,18 @@
 #include "servo_pwm.h"
 #include "package_action.h"
 
+/* 手柄右侧图形键 (对应 btn2) */
+#define PS2_BTN_TRIANGLE 0x10
+#define PS2_BTN_CIRCLE   0x20
+#define PS2_BTN_X        0x40
+#define PS2_BTN_SQUARE   0x80
+
+/* 手柄左侧十字键 (对应 btn1) */
+#define PS2_BTN_UP       0x10
+#define PS2_BTN_RIGHT    0x20
+#define PS2_BTN_DOWN     0x40
+#define PS2_BTN_LEFT     0x80
+
 /**
  * @brief  摇杆值转速度
  * @param  value    摇杆原始ADC值
@@ -130,6 +142,7 @@ int main(void)
 	uint8_t  zeroStopArmed = 0;   // 0=未启动, 1=已启动计时
 
 	/* ----- 边沿检测 & 包执行器 ----- */
+	uint8_t  prevBtn1 = 0;        // 上一次的btn1值，用于按键边沿检测
 	uint8_t  prevBtn2 = 0;        // 上一次的btn2值，用于按键边沿检测
 
 	// 硬件初始化
@@ -153,29 +166,6 @@ int main(void)
 
 	// 等待驱动器初始化
 	delay_ms(2000);
-
-	/* ===== 滑轨电机5上电自动回零 ===== */
-	Emm_V5_Origin_Modify_Params(
-		SLIDE_ADDR,        // 地址5
-		0,                 // svF=1 存储（每次上电都回零）
-		2,                 // o_mode=2 多圈无限位碰撞回零
-		0,                 // o_dir=0 ，CW顺时针向下找零点
-		SLIDE_HOMING_VEL,  // 回零速度200RPM
-		SLIDE_HOMING_TIMEOUT_MS, // 超时5秒
-		SLIDE_SL_VEL,      // 碰撞检测转速50RPM
-		SLIDE_SL_MA,       // 碰撞检测电流500mA
-		SLIDE_SL_MS,       // 碰撞检测维持时间500ms
-		0);                // potF=0 不上电自动触发（我们手动触发）
-	delay_ms(MOTOR_CMD_DELAY_MS);
-
-	// 触发回零
-	Emm_V5_Origin_Trigger_Return(SLIDE_ADDR, 2, 0);
-	// 等待回零完成（阻塞等待，此处延时需大于回零实际耗时）
-	delay_ms(SLIDE_HOMING_TIMEOUT_MS + 1000);
-
-	// 回零完成后，将当前位置标记为绝对零点
-	Emm_V5_Reset_CurPos_To_Zero(SLIDE_ADDR);
-	delay_ms(MOTOR_CMD_DELAY_MS);
 
 	// 确保滑轨电机静止
 	Emm_V5_Stop_Now(SLIDE_ADDR, 0);
@@ -283,16 +273,59 @@ int main(void)
 			Motor_SetSpeed_Batch(motorAddr, v1, v2, v3, v4);
 		}
 
-		// 7. L1+L2 边沿触发 → 启动包执行器
-		if(((joystick.btn2 & (PS2_BTN_L1 | PS2_BTN_L2)) == (PS2_BTN_L1 | PS2_BTN_L2)) &&
-		   ((prevBtn2 & (PS2_BTN_L1 | PS2_BTN_L2)) != (PS2_BTN_L1 | PS2_BTN_L2)))
+		// 7. 按键边沿触发 → 离散调用指定包
+		if((joystick.btn2 & PS2_BTN_L1) && !(joystick.btn2 & PS2_BTN_L2))
 		{
-			Package_StartNext();  // 启动下一个包的序列
+			if((joystick.btn2 & PS2_BTN_TRIANGLE) && !(prevBtn2 & PS2_BTN_TRIANGLE))
+			{
+				Package_Start(LOAD_TRAY_1);
+			}
+			else if((joystick.btn2 & PS2_BTN_SQUARE) && !(prevBtn2 & PS2_BTN_SQUARE))
+			{
+				Package_Start(LOAD_TRAY_2);
+			}
+			else if((joystick.btn2 & PS2_BTN_X) && !(prevBtn2 & PS2_BTN_X))
+			{
+				Package_Start(LOAD_TRAY_3);
+			}
+		}
+		else if((joystick.btn2 & PS2_BTN_L2) && !(joystick.btn2 & PS2_BTN_L1))
+		{
+			if((joystick.btn2 & PS2_BTN_TRIANGLE) && !(prevBtn2 & PS2_BTN_TRIANGLE))
+			{
+				Package_Start(UNLOAD_TRAY_1);
+			}
+			else if((joystick.btn2 & PS2_BTN_SQUARE) && !(prevBtn2 & PS2_BTN_SQUARE))
+			{
+				Package_Start(UNLOAD_TRAY_2);
+			}
+			else if((joystick.btn2 & PS2_BTN_X) && !(prevBtn2 & PS2_BTN_X))
+			{
+				Package_Start(UNLOAD_TRAY_3);
+			}
+		}
+
+		if((joystick.btn1 & PS2_BTN_DOWN) && !(prevBtn1 & PS2_BTN_DOWN))
+		{
+			Set_Tray2_Target_Angle(TRAY_POS_DEG_0);
+		}
+		else if((joystick.btn1 & PS2_BTN_LEFT) && !(prevBtn1 & PS2_BTN_LEFT))
+		{
+			Set_Tray2_Target_Angle(TRAY_POS_DEG_90);
+		}
+		else if((joystick.btn1 & PS2_BTN_UP) && !(prevBtn1 & PS2_BTN_UP))
+		{
+			Set_Tray2_Target_Angle(TRAY_POS_DEG_180);
+		}
+		else if((joystick.btn1 & PS2_BTN_RIGHT) && !(prevBtn1 & PS2_BTN_RIGHT))
+		{
+			Set_Tray2_Target_Angle(TRAY_POS_DEG_270);
 		}
 
 		// 8. 包执行器 Tick 驱动（在主循环中每轮调用）
 		Package_Tick();
 
+		prevBtn1 = joystick.btn1;
 		prevBtn2 = joystick.btn2;  // 保存本次按键状态用于边沿检测
 
 		delay_ms(MAIN_LOOP_DELAY_MS);
