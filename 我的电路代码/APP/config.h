@@ -48,7 +48,7 @@
  */
 /* Slide Rail Mechanism Parameters */
 #define SLIDE_BELT_PITCH                2    /* 皮带节距为 2mm (标准GT2皮带) */
-#define SLIDE_PULLEY_TEETH             20    /* 同步带轮为25齿 */
+#define SLIDE_PULLEY_TEETH             20    /* 同步带轮为20齿 */
 
 /* 自动计算：滑轨转一圈走多少毫米 (导程) */
 #define SLIDE_LEAD      (SLIDE_PULLEY_TEETH * SLIDE_BELT_PITCH)

@@ -103,12 +103,16 @@ static const PackStep_t g_steps_pkg3[] = {
     {PACK_STEP_SERVO,   CLAW_POS_RELEASE, 0xFFFF,       0xFFFF,      0,                           15},
     // 7. 滑轨回到过渡位（绝对位置12000）
     {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_TRANSIT,           60},
+    // 8. 云台转回夹取位，别的舵机不动
+    {PACK_STEP_SERVO,   0xFFFF,          PTZ_POS_GRIP,  0xFFFF,      0,                           25},
     // 结束
     {PACK_STEP_END,     0, 0, 0, 0, 0},
 };
 
-/* ---------- UNLOAD_TRAY_1：从托盘1取料 → 放到物料放置位7cm 云台转到2号位---------- */
+/* ---------- UNLOAD_TRAY_1：从托盘1取料 → 放到物料放置位7cm ---------- */
 static const PackStep_t g_steps_pkg4[] = {
+    // 1. 云台转到托盘1位
+    {PACK_STEP_SERVO,   0xFFFF,          PTZ_POS_TRAY1, 0xFFFF,      0,                           25},
     // 2. 滑轨从过渡位下降到物料托盘放置位13cm（绝对位置10400）
     {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_TRAY_PLACE,        40},
     // 3. 夹爪从张开位回到零位夹取
@@ -123,41 +127,49 @@ static const PackStep_t g_steps_pkg4[] = {
     {PACK_STEP_SERVO,   CLAW_POS_RELEASE, 0xFFFF,       0xFFFF,      0,                           15},
     // 8. 滑轨回到过渡位（绝对位置12000）
     {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_TRANSIT,           70},
-    // 9. 云台转到2号位
-    {PACK_STEP_SERVO,   0xFFFF,          PTZ_POS_TRAY2, 0xFFFF,      0,                           25},
     // 结束
     {PACK_STEP_END,     0, 0, 0, 0, 0},
 };
 
-/* ---------- UNLOAD_TRAY_2：从托盘2取料 → 放到物料放置位置--------- */
+/* ---------- UNLOAD_TRAY_2：从托盘2取料 → 放到物料放置位置 ---------- */
 static const PackStep_t g_steps_pkg6[] = {
-    {PACK_STEP_SERVO,   0xFFFF,          0xFFFF,        TRAY_POS_DYNAMIC, 0,                      20},
+    // 1. 根据方向键预选的角度，先将托盘转到对应格位（取料前对准），同时云台转到托盘位2
+    {PACK_STEP_SERVO,   0xFFFF,          PTZ_POS_TRAY2, 0xFFFF,      0,                      20},
+    // 2. 滑轨从过渡位下降到物料托盘放置位13cm（绝对位置10400）
     {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_TRAY_PLACE,        40},
+    // 3. 夹爪从张开位回到零位夹取物料
     {PACK_STEP_SERVO,   CLAW_POS_GRIP,   0xFFFF,        0xFFFF,      0,                           15},
+    // 4. 滑轨从托盘放置位回到过渡位（绝对位置12000），夹爪带料上升
     {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_TRANSIT,           60},
+    // 5. 云台转回夹取位，准备放到物料放置位
     {PACK_STEP_SERVO,   0xFFFF,          PTZ_POS_GRIP,  0xFFFF,      0,                           25},
+    // 6. 滑轨从过渡位下降到物料放置位7cm（绝对位置5600）
     {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_PLACE,             70},
+    // 7. 夹爪从零位回到张开位放料
     {PACK_STEP_SERVO,   CLAW_POS_RELEASE, 0xFFFF,       0xFFFF,      0,                           15},
+    // 8. 滑轨回到过渡位（绝对位置12000）
     {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_TRANSIT,           70},
-    {PACK_STEP_SERVO,   0xFFFF,          PTZ_POS_TRAY3, 0xFFFF,      0,                           25},
+    // 结束
     {PACK_STEP_END,     0, 0, 0, 0, 0},
 };
 
 /* ---------- UNLOAD_TRAY_3：从托盘3取料 → 放到物料放置位置---------- */
 static const PackStep_t g_steps_pkg7[] = {
-    // 1. 滑轨下降到托盘放置位13cm（从托盘3取料，绝对位置10400）
+    // 1. 云台转到托盘3位
+    {PACK_STEP_SERVO,   0xFFFF,          PTZ_POS_TRAY3, 0xFFFF,      0,                           25},
+    // 2. 滑轨下降到托盘放置位13cm（从托盘3取料，绝对位置10400）
     {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_TRAY_PLACE,        40},
-    // 2. 夹爪夹取
+    // 3. 夹爪夹取
     {PACK_STEP_SERVO,   CLAW_POS_GRIP,   0xFFFF,        0xFFFF,      0,                           15},
-    // 3. 滑轨回到过渡位（绝对位置12000）
+    // 4. 滑轨回到过渡位（绝对位置12000）
     {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_TRANSIT,           60},
-    // 4. 云台转回夹取位，只动云台
+    // 5. 云台转回夹取位，只动云台
     {PACK_STEP_SERVO,   0xFFFF,          PTZ_POS_GRIP,  0xFFFF,      0,                           25},
-    // 5. 滑轨下降到物料放置位7cm（绝对位置5600）
+    // 6. 滑轨下降到物料放置位7cm（绝对位置5600）
     {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_PLACE,             70},
-    // 6. 夹爪放料
+    // 7. 夹爪放料
     {PACK_STEP_SERVO,   CLAW_POS_RELEASE, 0xFFFF,       0xFFFF,      0,                           15},
-    // 7. 滑轨回到过渡位（绝对位置12000）
+    // 8. 滑轨回到过渡位（绝对位置12000）
     {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_TRANSIT,           70},
     // 结束
     {PACK_STEP_END,     0, 0, 0, 0, 0},
