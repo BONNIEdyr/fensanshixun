@@ -1,4 +1,3 @@
-import math
 # 模型路径
 # =========================
 MODEL_PATH = "/root/models/gcmodel/model_272201.mud"
@@ -25,14 +24,20 @@ IMAGE_HEIGHT = 224
 
 CENTER_X = IMAGE_WIDTH // 2
 CENTER_Y = IMAGE_HEIGHT // 2
-# =========================
-# 摄像头视场角（需要按实际镜头修改）
-# =========================import math
-FOV_X = 72.0     # 水平视场角
-FOV_Y = 55.0     # 垂直视场角
 
-focal_x = CENTER_X / math.tan(math.radians(FOV_X / 2))
-focal_y = CENTER_Y / math.tan(math.radians(FOV_Y / 2))
+# =========================
+# 参考点偏移（相对于画面中心）
+# 最终参考点坐标 = (CENTER_X + REF_X, CENTER_Y - REF_Y)
+# 坐标系：x 向右为正，y 向上为正
+# 
+# 例如：
+#   REF_X = 0,  REF_Y = 0   → 参考点为画面中心（默认）
+#   REF_X = 20, REF_Y = 0   → 参考点偏右20像素
+#   REF_X = 0,  REF_Y = 30  → 参考点偏上30像素
+# =========================
+REF_X = 0     # X方向偏移（像素，正→右）
+REF_Y = 0     # Y方向偏移（像素，正→上）
+
 # =========================
 # UART通信配置（STM32）
 # =========================

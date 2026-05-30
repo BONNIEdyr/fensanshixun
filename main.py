@@ -1,5 +1,4 @@
 from maix import camera, display, image, app, time
-import math
 
 from detector import Detector
 from comm import Comm
@@ -79,40 +78,28 @@ while not app.need_exit():
         cy = best.y + best.h // 2
 
         # =========================
-        # 像素偏差
+        # 参考点坐标（图像坐标系）
         # =========================
-        dx = cx - CENTER_X
-        dy = cy - CENTER_Y
+        ref_x = CENTER_X + REF_X
+        ref_y = CENTER_Y - REF_Y
 
         # =========================
-        # 像素 -> 角度
-        # atan版本（更准确）
+        # 相对参考点的偏差
         # =========================
-        angle_x = math.degrees(
-            math.atan(dx / focal_x)
-        )
-
-        angle_y = math.degrees(
-            math.atan(dy / focal_y)
-        )
+        dx = cx - ref_x
+        dy = ref_y - cy
 
         # =========================
-        # 低通滤波（滤角度）
+        # 限幅（防止超int8）
         # =========================
-        angle_x = filter_x.update(angle_x)
-        angle_y = filter_y.update(angle_y)
+        dx = max(-DX_LIMIT, min(DX_LIMIT, dx))
+        dy = max(-DY_LIMIT, min(DY_LIMIT, dy))
 
         # =========================
-        # 限幅
+        # 低通滤波
         # =========================
-        angle_x = max(-45, min(45, angle_x))
-        angle_y = max(-35, min(35, angle_y))
-
-        # =========================
-        # 转int（串口发送需要）
-        # =========================
-        angle_x = int(angle_x)
-        angle_y = int(angle_y)
+        dx = int(filter_x.update(dx))
+        dy = int(filter_y.update(dy))
 
         # =========================
         # 类别判断
@@ -138,7 +125,7 @@ while not app.need_exit():
         # =========================
         # 发送串口
         # =========================
-        comm.send(mode, angle_x, angle_y)
+        comm.send(mode, dx, dy)
 
         # =========================
         # 调试显示
@@ -164,11 +151,11 @@ while not app.need_exit():
             color
         )
 
-        # 角度显示
+        # 偏差显示
         img.draw_string(
             2,
             2,
-            f"ax:{angle_x} ay:{angle_y}",
+            f"dx:{dx} dy:{dy}",
             image.COLOR_WHITE
         )
 
@@ -193,6 +180,24 @@ while not app.need_exit():
         CENTER_X,
         CENTER_Y,
         image.COLOR_WHITE
+    )
+
+    # =========================
+    # 参考点（REF_X, REF_Y 偏移后的位置）
+    # =========================
+    ref_draw_x = CENTER_X + REF_X
+    ref_draw_y = CENTER_Y - REF_Y
+    img.draw_circle(
+        ref_draw_x,
+        ref_draw_y,
+        3,
+        image.COLOR_YELLOW
+    )
+    img.draw_string(
+        ref_draw_x + 5,
+        ref_draw_y - 10,
+        f"REF({REF_X},{REF_Y})",
+        image.COLOR_YELLOW
     )
 
     # =========================
