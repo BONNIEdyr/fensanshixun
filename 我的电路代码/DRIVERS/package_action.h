@@ -93,5 +93,7 @@ void Package_Stop(void);
  * @brief  获取当前包序号 (0~7)
  */
 uint8_t Package_GetCurrentIndex(void);
+uint8_t Package_IsCameraAlignPending(void);
+void Package_CameraAlignDone(void);
 
 #endif /* __PACKAGE_ACTION_H */

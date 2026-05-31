@@ -21,6 +21,7 @@ static struct {
     uint16_t     waitTimer;                // 延时/等待计时器 (tick)
     uint8_t      busy;                     // 忙标志
     uint8_t      slideTriggered;           // 本步是否已触发了滑轨运动
+    uint8_t      cameraAlignPending;       // unload packages wait for camera alignment first
 } g_pkg;
 
 #define TRAY_POS_DYNAMIC 0xFFFE
@@ -264,6 +265,7 @@ void Package_Init(void)
     g_pkg.completedTriggerCount = 0;
     g_pkg.waitTimer             = 0;
     g_pkg.slideTriggered        = 0;
+    g_pkg.cameraAlignPending    = 0;
 }
 
 void Package_Start(PackID_t id)
@@ -277,6 +279,7 @@ void Package_Start(PackID_t id)
     g_pkg.completedTriggerCount = 0;
     g_pkg.waitTimer             = 0;
     g_pkg.slideTriggered        = 0;
+    g_pkg.cameraAlignPending    = (id >= UNLOAD_TRAY_1) ? 1 : 0;
     g_pkg.busy                  = 1;
     g_pkg.state                 = PACK_STATE_IDLE;
 }
@@ -284,6 +287,7 @@ void Package_Start(PackID_t id)
 void Package_Tick(void)
 {
     if(!g_pkg.busy) return;
+    if(g_pkg.cameraAlignPending) return;
 
     const Package_t *pkg = &g_packages[g_pkg.currentPkgIdx];
     const PackStep_t *step = &pkg->steps[g_pkg.currentStepIdx];
@@ -395,9 +399,20 @@ void Package_Stop(void)
     g_pkg.waitTimer             = 0;
     g_pkg.currentStepIdx        = 0;
     g_pkg.completedTriggerCount = 0;
+    g_pkg.cameraAlignPending    = 0;
 }
 
 uint8_t Package_GetCurrentIndex(void)
 {
     return g_pkg.currentPkgIdx;
+}
+
+uint8_t Package_IsCameraAlignPending(void)
+{
+    return (g_pkg.busy && g_pkg.cameraAlignPending);
+}
+
+void Package_CameraAlignDone(void)
+{
+    g_pkg.cameraAlignPending = 0;
 }

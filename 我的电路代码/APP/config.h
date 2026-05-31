@@ -96,6 +96,18 @@
 
 /* 滑轨电机运动等待超时，单位ms */
 #define SLIDE_MOVE_WAIT_MS           2500            /* 单次运动等待完成超时 */
+
+/* ============================================================
+ *  轮边电机位置模式参数（摄像头视觉对准用）
+ *  轮径80mm, 周长≈251.33mm, 3200 pulse/rev (1.8°电机+16细分)
+ *  2cm = 20mm → 20/251.33×3200 ≈ 255 pulse
+ * ============================================================ */
+#define WHEEL_DIAMETER_MM                  80    /* 麦克纳姆轮直径 */
+#define WHEEL_PULSES_PER_REV             3200    /* 每圈脉冲数 (200步×16细分) */
+#define CAMERA_ALIGN_STEP_PULSES          255    /* 摄像头对准每次步进2cm对应的脉冲数 */
+#define CAMERA_ALIGN_POS_VEL              100    /* 对准位置模式速度 RPM */
+#define CAMERA_ALIGN_POS_ACC              150    /* 对准位置模式加速度 */
+#define CAMERA_ALIGN_MOVE_TIMEOUT_MS      300    /* 单次2cm位置运动超时 */
 #endif /* __CONFIG_H */
 
 

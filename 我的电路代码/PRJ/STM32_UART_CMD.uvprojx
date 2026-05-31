@@ -504,6 +504,16 @@
               <FilePath>..\DRIVERS\servo_pwm.h</FilePath>
             </File>
             <File>
+              <FileName>camera.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\DRIVERS\camera.c</FilePath>
+            </File>
+            <File>
+              <FileName>camera.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\DRIVERS\camera.h</FilePath>
+            </File>
+            <File>
               <FileName>package_action.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\DRIVERS\package_action.c</FilePath>

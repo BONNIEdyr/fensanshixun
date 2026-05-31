@@ -1,5 +1,6 @@
 #include "board.h"
 #include "config.h"
+#include "camera.h"
 
 /**********************************************************
 ***	Emm_V5.0�����ջ���������
@@ -105,4 +106,5 @@ void board_init(void)
 	nvic_init();
 	clock_init();
 	usart_init();
+	Camera_Init();
 }
