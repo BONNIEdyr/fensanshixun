@@ -21,10 +21,6 @@
 #define CAMERA_MODE_OBJECT            0x01
 #define CAMERA_MODE_RING              0x02
 
-#define CAMERA_ALIGN_SPEED_RPM        60
-#define CAMERA_STOP_CONFIRM_COUNT     3
-#define CAMERA_FRAME_TIMEOUT_MS       300
-
 typedef struct {
 	uint8_t mode;
 	int8_t dx;

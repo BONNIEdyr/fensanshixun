@@ -286,8 +286,8 @@ void Package_Start(PackID_t id)
 
 void Package_Tick(void)
 {
-    if(!g_pkg.busy) return;
-    if(g_pkg.cameraAlignPending) return;
+    if(!g_pkg.busy) return; //当前没有包在执行
+    if(g_pkg.cameraAlignPending) return; // 摄像头还没有对准完毕
 
     const Package_t *pkg = &g_packages[g_pkg.currentPkgIdx];
     const PackStep_t *step = &pkg->steps[g_pkg.currentStepIdx];

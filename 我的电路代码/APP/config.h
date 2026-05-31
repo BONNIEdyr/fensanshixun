@@ -75,7 +75,6 @@
 
 /* ============================================================
  *  滑轨4个绝对位置（脉冲数，从零点开始）
- *  上电回零后自动上升到过渡位15cm
  * ============================================================ */
 #define SLIDE_POS_TRANSIT_MM          150             /* 过渡位 15cm */
 #define SLIDE_POS_TRANSIT            (SLIDE_POS_TRANSIT_MM * SLIDE_PULSES_PER_MM)  /* = 12000脉冲 */
@@ -108,6 +107,8 @@
 #define CAMERA_ALIGN_POS_VEL              100    /* 对准位置模式速度 RPM */
 #define CAMERA_ALIGN_POS_ACC              150    /* 对准位置模式加速度 */
 #define CAMERA_ALIGN_MOVE_TIMEOUT_MS      300    /* 单次2cm位置运动超时 */
+#define CAMERA_STOP_CONFIRM_COUNT           3    /* 摄像头对准完成防抖：连续该次数偏差为0才算对准完成 */
+#define CAMERA_FRAME_TIMEOUT_MS           300    /* 摄像头帧超时：连续收不到有效帧超过此时间则退出摄像头对准 */
 #endif /* __CONFIG_H */
 
 

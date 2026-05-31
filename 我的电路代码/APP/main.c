@@ -438,7 +438,7 @@ int main(void)
 				/*
 				 * 获取帧失败（如串口接收中断、帧校验错误等）
 				 * 启动超时计数器：若持续CAMERA_FRAME_TIMEOUT_MS收不到有效帧，
-				 * 则发送速度0让电机减速等待，避免无数据时电机持续保持上一帧速度
+				 * 则急停电机、退出摄像头对准模式，回到正常摇杆控制状态
 				 */
 				if(cameraFrameTimeout < CAMERA_FRAME_TIMEOUT_MS)
 				{
@@ -446,7 +446,12 @@ int main(void)
 				}
 				else
 				{
-					Motor_SetSpeed_Batch(motorAddr, 0, 0, 0, 0);
+					Motor_AllStop(motorAddr);          /* 急停所有电机 */
+					Package_Stop();                     /* 退出摄像头对准模式 */
+					Camera_ResetFrameState();           /* 复位摄像头帧状态机 */
+					cameraStopCount = 0;                 /* 复位停止确认计数 */
+					cameraFrameTimeout = 0;              /* 复位超时计时器 */
+					cameraMovingActive = 0;              /* 复位位置移动等待状态 */
 				}
 			}
 
@@ -508,23 +513,52 @@ int main(void)
 		}
 
 		// 7. 按键边沿触发 → 离散调用指定包
+
+		/* 【十字键（btn1）→ 设置2号托盘目标角度】 */
+		/* ↓ → 0° */
+		if((joystick.btn1 & PS2_BTN_DOWN) && !(prevBtn1 & PS2_BTN_DOWN))
+		{
+			Set_Tray2_Target_Angle(TRAY_POS_DEG_0);
+		}
+		/* ← → 90° */
+		else if((joystick.btn1 & PS2_BTN_LEFT) && !(prevBtn1 & PS2_BTN_LEFT))
+		{
+			Set_Tray2_Target_Angle(TRAY_POS_DEG_90);
+		}
+		/* ↑ → 180° */
+		else if((joystick.btn1 & PS2_BTN_UP) && !(prevBtn1 & PS2_BTN_UP))
+		{
+			Set_Tray2_Target_Angle(TRAY_POS_DEG_180);
+		}
+		/* → → 270° */
+		else if((joystick.btn1 & PS2_BTN_RIGHT) && !(prevBtn1 & PS2_BTN_RIGHT))
+		{
+			Set_Tray2_Target_Angle(TRAY_POS_DEG_270);
+		}
+
+		/* 【L1（左肩键1）+ 图形键 → 装载托盘】 */
 		if((joystick.btn2 & PS2_BTN_L1) && !(joystick.btn2 & PS2_BTN_L2))
 		{
+			/* L1 + △ → 装载1号托盘 */
 			if((joystick.btn2 & PS2_BTN_TRIANGLE) && !(prevBtn2 & PS2_BTN_TRIANGLE))
 			{
 				Package_Start(LOAD_TRAY_1);
 			}
+			/* L1 + □ → 装载2号托盘 */
 			else if((joystick.btn2 & PS2_BTN_SQUARE) && !(prevBtn2 & PS2_BTN_SQUARE))
 			{
 				Package_Start(LOAD_TRAY_2);
 			}
+			/* L1 + × → 装载3号托盘 */
 			else if((joystick.btn2 & PS2_BTN_X) && !(prevBtn2 & PS2_BTN_X))
 			{
 				Package_Start(LOAD_TRAY_3);
 			}
 		}
+		/* 【L2（左肩键2）+ 图形键 → 卸载托盘（含摄像头状态复位）】 */
 		else if((joystick.btn2 & PS2_BTN_L2) && !(joystick.btn2 & PS2_BTN_L1))
 		{
+			/* L2 + △ → 卸载1号托盘 */
 			if((joystick.btn2 & PS2_BTN_TRIANGLE) && !(prevBtn2 & PS2_BTN_TRIANGLE))
 			{
 				/* 触发卸载1号托盘前，复位摄像头状态机、停止计数器和超时计数器 */
@@ -534,6 +568,7 @@ int main(void)
 				cameraMovingActive = 0;         /* 复位位置移动等待状态 */
 				Package_Start(UNLOAD_TRAY_1);
 			}
+			/* L2 + □ → 卸载2号托盘 */
 			else if((joystick.btn2 & PS2_BTN_SQUARE) && !(prevBtn2 & PS2_BTN_SQUARE))
 			{
 				/* 触发卸载2号托盘前，复位摄像头状态机、停止计数器和超时计数器 */
@@ -543,6 +578,7 @@ int main(void)
 				cameraMovingActive = 0;         /* 复位位置移动等待状态 */
 				Package_Start(UNLOAD_TRAY_2);
 			}
+			/* L2 + × → 卸载3号托盘 */
 			else if((joystick.btn2 & PS2_BTN_X) && !(prevBtn2 & PS2_BTN_X))
 			{
 				/* 触发卸载3号托盘前，复位摄像头状态机、停止计数器和超时计数器 */
@@ -552,23 +588,6 @@ int main(void)
 				cameraMovingActive = 0;         /* 复位位置移动等待状态 */
 				Package_Start(UNLOAD_TRAY_3);
 			}
-		}
-
-		if((joystick.btn1 & PS2_BTN_DOWN) && !(prevBtn1 & PS2_BTN_DOWN))
-		{
-			Set_Tray2_Target_Angle(TRAY_POS_DEG_0);
-		}
-		else if((joystick.btn1 & PS2_BTN_LEFT) && !(prevBtn1 & PS2_BTN_LEFT))
-		{
-			Set_Tray2_Target_Angle(TRAY_POS_DEG_90);
-		}
-		else if((joystick.btn1 & PS2_BTN_UP) && !(prevBtn1 & PS2_BTN_UP))
-		{
-			Set_Tray2_Target_Angle(TRAY_POS_DEG_180);
-		}
-		else if((joystick.btn1 & PS2_BTN_RIGHT) && !(prevBtn1 & PS2_BTN_RIGHT))
-		{
-			Set_Tray2_Target_Angle(TRAY_POS_DEG_270);
 		}
 
 		// 8. 包执行器 Tick 驱动（在主循环中每轮调用）
