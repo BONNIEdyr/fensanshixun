@@ -1,4 +1,5 @@
 from maix import camera, display, image, app, time
+import math
 
 from detector import Detector
 from comm import Comm
@@ -123,9 +124,18 @@ while not app.need_exit():
             label_name = "UNKNOWN"
 
         # =========================
-        # 发送串口
+        # 偏差模长
         # =========================
-        comm.send(mode, dx, dy)
+        dist = math.sqrt(dx * dx + dy * dy)
+
+        # =========================
+        # 发送串口
+        # 对准时（模长小于阈值）发送停止指令
+        # =========================
+        if dist < STOP_DIST_THRESHOLD:
+            comm.send_stop()
+        else:
+            comm.send(mode, dx, dy)
 
         # =========================
         # 调试显示

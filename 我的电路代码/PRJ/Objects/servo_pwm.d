@@ -1,0 +1,15 @@
+.\objects\servo_pwm.o: ..\DRIVERS\servo_pwm.c
+.\objects\servo_pwm.o: ..\DRIVERS\servo_pwm.h
+.\objects\servo_pwm.o: ..\CMSIS\stm32f10x.h
+.\objects\servo_pwm.o: ..\CMSIS\core_cm3.h
+.\objects\servo_pwm.o: D:\AppGallery\Keil_v5\ARM\ARMCC\Bin\..\include\stdint.h
+.\objects\servo_pwm.o: ..\CMSIS\system_stm32f10x.h
+.\objects\servo_pwm.o: ..\APP\stm32f10x_conf.h
+.\objects\servo_pwm.o: D:\AppGallery\Keil_v5\ARM\ARMCC\Bin\..\include\stdbool.h
+.\objects\servo_pwm.o: ..\LIB\STM32F10x_StdPeriph_Lib_V3.5.0\inc\stm32f10x_gpio.h
+.\objects\servo_pwm.o: ..\CMSIS\stm32f10x.h
+.\objects\servo_pwm.o: ..\LIB\STM32F10x_StdPeriph_Lib_V3.5.0\inc\stm32f10x_rcc.h
+.\objects\servo_pwm.o: ..\LIB\STM32F10x_StdPeriph_Lib_V3.5.0\inc\stm32f10x_tim.h
+.\objects\servo_pwm.o: ..\LIB\STM32F10x_StdPeriph_Lib_V3.5.0\inc\stm32f10x_usart.h
+.\objects\servo_pwm.o: ..\LIB\STM32F10x_StdPeriph_Lib_V3.5.0\inc\misc.h
+.\objects\servo_pwm.o: ..\APP\config.h

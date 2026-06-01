@@ -66,6 +66,11 @@ GRAB_THRESHOLD_X = 2
 GRAB_THRESHOLD_Y = 2
 
 
+# 偏差模长阈值（像素）
+# 当 sqrt(dx² + dy²) < STOP_DIST_THRESHOLD 时，
+# 认为已对准，发送停止指令
+STOP_DIST_THRESHOLD = 5
+
 # =========================
 # 滤波参数，越大越稳【后续调】
 # =========================
