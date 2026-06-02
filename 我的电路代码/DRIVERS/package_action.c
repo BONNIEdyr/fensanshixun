@@ -31,15 +31,15 @@ static struct {
  *    LOAD_TRAY_1/2/3 与 UNLOAD_TRAY_1/2/3
  *  注释格式：
  *    // N. 动作描述
- *  滑轨4个高度：过渡位15cm / 托盘放置位13cm / 物料夹取位10cm / 物料放置位7cm
+ *  滑轨4个高度：过渡位13cm / 托盘放置位10cm / 物料夹取位4.2cm / 物料放置位0cm（零位）
  *  夹爪：CLAW_POS_GRIP=0°闭合夹取 / CLAW_POS_RELEASE=60°张开放料
  *  云台：PTZ_POS_GRIP=0°夹取位 / PTZ_POS_TRAY1/2/3=托盘位1/2/3
  *  托盘：TRAY_POS_1/2/3/4=托盘1/2/3/4号位
  *  滑轨绝对位置宏（脉冲数）：
- *    SLIDE_POS_TRANSIT       = 12000（过渡位15cm）
- *    SLIDE_POS_TRAY_PLACE    = 10400（托盘放置位13cm）
- *    SLIDE_POS_GRAB          =  8000（物料夹取位10cm）
- *    SLIDE_POS_PLACE         =  5600（物料放置位7cm）
+ *    SLIDE_POS_TRANSIT       = 10400（过渡位13cm）
+ *    SLIDE_POS_TRAY_PLACE    =  8000（托盘放置位10cm）
+ *    SLIDE_POS_GRAB          =  3360（物料夹取位4.2cm）
+ *    SLIDE_POS_PLACE         =     0（物料放置位0cm，零位）
  *   所有滑轨控制使用绝对位置模式 (raF=1)
  * ============================================================ */
 
@@ -113,8 +113,8 @@ static const PackStep_t g_steps_pkg3[] = {
 static const PackStep_t g_steps_pkg4[] = {
     // 1. 云台转到托盘1位
     {PACK_STEP_SERVO,   0xFFFF,          PTZ_POS_TRAY1, 0xFFFF,      0,                           25},
-    // 2. 滑轨从过渡位下降到物料托盘放置位13cm（绝对位置10400）
-    {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_TRAY_PLACE,        40},
+    // 2. 滑轨从过渡位下降到托盘夹取位10cm（绝对位置8000）
+    {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_TRAY_PICKUP,       40},
     // 3. 夹爪从张开位回到零位夹取
     {PACK_STEP_SERVO,   CLAW_POS_GRIP,   0xFFFF,        0xFFFF,      0,                           15},
     // 4. 滑轨从托盘放置位回到过渡位（绝对位置12000）
@@ -135,8 +135,8 @@ static const PackStep_t g_steps_pkg4[] = {
 static const PackStep_t g_steps_pkg6[] = {
     // 1. 根据方向键预选的角度，先将托盘转到对应格位（取料前对准），同时云台转到托盘位2
     {PACK_STEP_SERVO,   0xFFFF,          PTZ_POS_TRAY2, 0xFFFF,      0,                      20},
-    // 2. 滑轨从过渡位下降到物料托盘放置位13cm（绝对位置10400）
-    {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_TRAY_PLACE,        40},
+    // 2. 滑轨从过渡位下降到托盘夹取位10cm（绝对位置8000）
+    {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_TRAY_PICKUP,       40},
     // 3. 夹爪从张开位回到零位夹取物料
     {PACK_STEP_SERVO,   CLAW_POS_GRIP,   0xFFFF,        0xFFFF,      0,                           15},
     // 4. 滑轨从托盘放置位回到过渡位（绝对位置12000），夹爪带料上升
@@ -157,8 +157,8 @@ static const PackStep_t g_steps_pkg6[] = {
 static const PackStep_t g_steps_pkg7[] = {
     // 1. 云台转到托盘3位
     {PACK_STEP_SERVO,   0xFFFF,          PTZ_POS_TRAY3, 0xFFFF,      0,                           25},
-    // 2. 滑轨下降到托盘放置位13cm（从托盘3取料，绝对位置10400）
-    {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_TRAY_PLACE,        40},
+    // 2. 滑轨下降到托盘夹取位10cm（绝对位置8000）
+    {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_TRAY_PICKUP,       40},
     // 3. 夹爪夹取
     {PACK_STEP_SERVO,   CLAW_POS_GRIP,   0xFFFF,        0xFFFF,      0,                           15},
     // 4. 滑轨回到过渡位（绝对位置12000）
@@ -234,8 +234,8 @@ static void Package_ExecuteStep(const PackStep_t *step)
 
     if(tray != 0xFFFF) Servo_Tray_SetPulse(tray);
 
-    /* 设置滑轨（仅当不为0时执行）- 绝对位置模式 raF=1 */
-    if(step->slidePulses != 0)
+    /* 设置滑轨 — 只要步骤类型是滑轨类就下发指令（含目标位置=0零位） */
+    if(step->type == PACK_STEP_SLIDE || step->type == PACK_STEP_ALL)
     {
         // 绝对位置模式：slidePulses 是绝对位置脉冲数（正数）
         // raF=1 绝对位置模式

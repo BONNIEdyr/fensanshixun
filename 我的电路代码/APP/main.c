@@ -170,9 +170,30 @@ int main(void)
 	// 确保滑轨电机静止
 	Emm_V5_Stop_Now(SLIDE_ADDR, 0);
 	delay_ms(MOTOR_CMD_DELAY_MS);
-	/* ===== 滑轨电机5上电后运动到过渡位（绝对位置模式 raF=1） ===== */
+
+	/* ===== 滑轨电机5回零参数配置（有记忆模式：上电自动回零） ===== */
+	// svF=true 存储到驱动器Flash，掉电不丢失
+	// o_mode=2 多圈无限位碰撞回零
+	// o_dir=0  CW方向向下运动寻找零位
+	// potF=true 上电自动触发回零（有记忆模式的核心）
+	Emm_V5_Origin_Modify_Params(SLIDE_ADDR,
+	                            1,                    // svF=true，存储到Flash
+	                            2,                    // o_mode=2，多圈无限位碰撞回零
+	                            0,                    // o_dir=0，CW方向向下碰零位
+	                            SLIDE_HOMING_VEL,     // 回零速度
+	                            SLIDE_HOMING_TIMEOUT_MS,  // 回零超时
+	                            SLIDE_SL_VEL,         // 碰撞检测转速
+	                            SLIDE_SL_MA,          // 碰撞检测电流
+	                            SLIDE_SL_MS,          // 碰撞检测维持时间
+	                            1);                   // potF=true，上电自动触发回零
+	delay_ms(100);
+
+	/* 等待驱动器上电自动回零完成（potF=true 已配置，驱动器上电自动执行回零） */
+	delay_ms(SLIDE_HOMING_TIMEOUT_MS);
+
+	/* ===== 滑轨电机5回零完成后运动到过渡位（绝对位置模式 raF=1） ===== */
 	Emm_V5_Pos_Control(SLIDE_ADDR, 1, SLIDE_POS_VEL, SLIDE_POS_ACC,
-	                   SLIDE_POS_TRANSIT, 1, 1);  // raF=1 绝对位置模式 dir=1向零位上方 → 上升到过渡位15cm
+	                   SLIDE_POS_TRANSIT, 1, 1);  // raF=1 绝对位置模式 dir=1向零位上方 → 上升到过渡位13cm
 	delay_ms(SLIDE_MOVE_WAIT_MS);  // 等待运动完成（上电这里暂保留固定延时）
 
 	while(1)
