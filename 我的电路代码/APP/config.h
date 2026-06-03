@@ -81,12 +81,21 @@
 #define SLIDE_POS_TRANSIT            (SLIDE_POS_TRANSIT_MM * SLIDE_PULSES_PER_MM)  /* = 10400脉冲 */
 #define SLIDE_POS_TRAY_PLACE_MM       100             /* 托盘放置位 10cm */
 #define SLIDE_POS_TRAY_PLACE         (SLIDE_POS_TRAY_PLACE_MM * SLIDE_PULSES_PER_MM)  /* = 8000脉冲 */
-#define SLIDE_POS_TRAY_PICKUP_MM      70             /* 托盘夹取位 10cm（从托盘取料高度） */
+#define SLIDE_POS_TRAY_PICKUP_MM      80             /* 托盘夹取位 10cm（从托盘取料高度） */
 #define SLIDE_POS_TRAY_PICKUP        (SLIDE_POS_TRAY_PICKUP_MM * SLIDE_PULSES_PER_MM) /* = 8000脉冲 */
 #define SLIDE_POS_GRAB_MM             42              /* 物料夹取位 4.2cm */
 #define SLIDE_POS_GRAB               (SLIDE_POS_GRAB_MM * SLIDE_PULSES_PER_MM)     /* = 3360脉冲 */
-#define SLIDE_POS_PLACE_MM            0               /* 物料放置位 0cm（零位） */
-#define SLIDE_POS_PLACE              (SLIDE_POS_PLACE_MM * SLIDE_PULSES_PER_MM)    /* = 0脉冲 */
+/* 物料放置位 ≈ 0cm（零位）。
+ * 注意：本滑轨用碰撞回零(o_mode=2)，绝对0=底部硬限位。
+ * 若直接给0，每次放料都会顶死硬限位→堵转→破坏绝对位置基准，
+ * 导致后续"回过渡位"指令失效。故保留约2mm余量避免顶死，
+ * 物理高度上几乎等同0位放料。
+ * 换算与上面一致：脉冲 = mm × SLIDE_PULSES_PER_MM(80)，2mm×80=160脉冲 */
+#define SLIDE_POS_PLACE_MM            2               /* 物料放置位 2mm（≈0位，留余量防顶死） */
+#define SLIDE_POS_PLACE              (SLIDE_POS_PLACE_MM * SLIDE_PULSES_PER_MM)    /* = 160脉冲 */
+
+
+
 
 /* 从过渡位到各位置的相对移动脉冲数（+CCW上升，-CW下降） */
 #define SLIDE_TRANSIT_TO_GRAB         ((int32_t)SLIDE_POS_GRAB   - (int32_t)SLIDE_POS_TRANSIT)  /* -7040（下降8.8cm） */
