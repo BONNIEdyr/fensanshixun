@@ -1,21 +1,20 @@
 from maix import nn
-from config import *
+from config import CONF_TH, IOU_TH
 
 class Detector:
+    """
+    YOLO检测器封装
+    当前版本只用于圆环检测（ring placement）负责“检测 + 返回结果”
+    """
 
     def __init__(self, model_path):
 
-        # 加载 YOLO 模型
-        self.detector = nn.YOLOv5(
-            model=model_path
-        )
+        self.detector = nn.YOLOv5(model=model_path)
 
-        # 模型输入参数
         self.input_width = self.detector.input_width()
         self.input_height = self.detector.input_height()
         self.input_format = self.detector.input_format()
 
-        # 标签
         self.labels = self.detector.labels
 
         print("========== YOLO MODEL INFO ==========")
@@ -24,9 +23,7 @@ class Detector:
         print("=====================================")
 
     # =========================
-    # 检测函数
-    # 输入：img
-    # 输出：objs
+    # 执行检测
     # =========================
     def detect(self, img):
 
@@ -39,18 +36,21 @@ class Detector:
         return objs
 
     # =========================
-    # 获取最佳目标
-    # 默认：
-    # 选择面积最大的目标
+    # 获取圆环目标（基础过滤）
+    # 只做“类别筛选”，不做排序策略
     # =========================
-    def get_best_target(self, objs):
+    def get_rings(self, objs):
 
         if not objs:
-            return None
+            return []
 
-        best = max(
-            objs,
-            key=lambda o: o.w * o.h
-        )
+        return [
+            o for o in objs
+            if o.class_id == 1   # CLASS_RING
+        ]
 
-        return best
+    # =========================
+    # 获取所有目标（备用）
+    # =========================
+    def get_all(self, objs):
+        return objs

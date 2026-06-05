@@ -6,51 +6,56 @@ from comm import Comm
 from filter import LowPassFilter
 from config import *
 
-
 # =========================
 # 初始化
 # =========================
 
-# YOLO检测器
 detector = Detector(MODEL_PATH)
 
-# 摄像头
 cam = camera.Camera(
     detector.detector.input_width(),
     detector.detector.input_height(),
     detector.detector.input_format()
 )
 
-# 显示
 disp = display.Display()
-
-# 串口
 comm = Comm(UART_PORT, UART_BAUD)
 
-# 低通滤波
 filter_x = LowPassFilter(alpha=FILTER_ALPHA)
 filter_y = LowPassFilter(alpha=FILTER_ALPHA)
 
-# FPS
 fps = time.FPS()
 
+# =========================
+# 目标锁定
+# =========================
+locked = False
+locked_target = None
 
 # =========================
-# 获取最佳目标
-# 当前策略：
-# 选择面积最大的目标
+# 防抖状态
 # =========================
-def get_best_target(objs):
+stable_count = 0
+STABLE_FRAME = 5   # 连续稳定帧数才算DONE
 
-    if not objs:
+
+# =========================
+# 找最近圆环
+# =========================
+def get_best_ring(objs):
+    rings = [o for o in objs if o.class_id == CLASS_RING]
+
+    if not rings:
         return None
 
-    best = max(
-        objs,
-        key=lambda o: o.w * o.h
-    )
+    def dist(o):
+        cx = o.x + o.w // 2
+        cy = o.y + o.h // 2
+        rx = CENTER_X + REF_X
+        ry = CENTER_Y - REF_Y
+        return (cx - rx) ** 2 + (cy - ry) ** 2
 
-    return best
+    return min(rings, key=dist)
 
 
 # =========================
@@ -58,167 +63,107 @@ def get_best_target(objs):
 # =========================
 while not app.need_exit():
 
-    # 读取图像
     img = cam.read()
-
-    # YOLO检测
     objs = detector.detect(img)
 
-    # 获取最佳目标
-    best = get_best_target(objs)
+    # =========================
+    # 未锁定 → 选目标
+    # =========================
+    if not locked:
+        target = get_best_ring(objs)
+
+        if target:
+            locked_target = target
+            locked = True
+            stable_count = 0
 
     # =========================
-    # 检测到目标
-    # =========================
-    if best:
-
-        # =========================
-        # 目标中心
-        # =========================
-        cx = best.x + best.w // 2
-        cy = best.y + best.h // 2
-
-        # =========================
-        # 参考点坐标（图像坐标系）
-        # =========================
-        ref_x = CENTER_X + REF_X
-        ref_y = CENTER_Y - REF_Y
-
-        # =========================
-        # 相对参考点的偏差
-        # =========================
-        dx = cx - ref_x
-        dy = ref_y - cy
-
-        # =========================
-        # 限幅（防止超int8）
-        # =========================
-        dx = max(-DX_LIMIT, min(DX_LIMIT, dx))
-        dy = max(-DY_LIMIT, min(DY_LIMIT, dy))
-
-        # =========================
-        # 低通滤波
-        # =========================
-        dx = int(filter_x.update(dx))
-        dy = int(filter_y.update(dy))
-
-        # =========================
-        # 类别判断
-        # =========================
-        if best.class_id == CLASS_OBJECT:
-
-            mode = MODE_OBJECT
-            color = image.COLOR_GREEN
-            label_name = "OBJECT"
-
-        elif best.class_id == CLASS_RING:
-
-            mode = MODE_RING
-            color = image.COLOR_BLUE
-            label_name = "RING"
-
-        else:
-
-            mode = MODE_NONE
-            color = image.COLOR_RED
-            label_name = "UNKNOWN"
-
-        # =========================
-        # 偏差模长
-        # =========================
-        dist = math.sqrt(dx * dx + dy * dy)
-
-        # =========================
-        # 发送串口
-        # 对准时（模长小于阈值）发送停止指令
-        # =========================
-        if dist < STOP_DIST_THRESHOLD:
-            comm.send_stop()
-        else:
-            comm.send(mode, dx, dy)
-
-        # =========================
-        # 调试显示
-        # =========================
-
-        # 目标框
-        img.draw_rect(
-            best.x,
-            best.y,
-            best.w,
-            best.h,
-            color=color
-        )
-
-        # 中心点
-        img.draw_cross(cx, cy, color)
-
-        # 标签
-        img.draw_string(
-            best.x,
-            best.y - 18,
-            f"{label_name} {best.score:.2f}",
-            color
-        )
-
-        # 偏差显示
-        img.draw_string(
-            2,
-            2,
-            f"dx:{dx} dy:{dy}",
-            image.COLOR_WHITE
-        )
-
-    # =========================
-    # 未检测到目标
+    # 已锁定 → 固定目标
     # =========================
     else:
+        target = locked_target
 
-        comm.send(MODE_NONE, 0, 0)
+        # 丢失目标 → 解锁
+        if target is None:
+            locked = False
+            filter_x.reset()
+            filter_y.reset()
+            comm.send_mode(0x00, 0, 0)
 
-        img.draw_string(
-            2,
-            2,
-            "NO TARGET",
-            image.COLOR_RED
-        )
-
-    # =========================
-    # 画面中心
-    # =========================
-    img.draw_cross(
-        CENTER_X,
-        CENTER_Y,
-        image.COLOR_WHITE
-    )
+            img.draw_string(2, 2, "LOST", image.COLOR_RED)
+            disp.show(img)
+            continue
 
     # =========================
-    # 参考点（REF_X, REF_Y 偏移后的位置）
+    # 计算中心
     # =========================
-    ref_draw_x = CENTER_X + REF_X
-    ref_draw_y = CENTER_Y - REF_Y
-    img.draw_circle(
-        ref_draw_x,
-        ref_draw_y,
-        3,
-        image.COLOR_YELLOW
-    )
+    cx = target.x + target.w // 2
+    cy = target.y + target.h // 2
+
+    ref_x = CENTER_X + REF_X
+    ref_y = CENTER_Y - REF_Y
+
+    dx = cx - ref_x
+    dy = ref_y - cy
+
+    dx = filter_x.update(dx)
+    dy = filter_y.update(dy)
+
+    dx = int(max(-DX_LIMIT, min(DX_LIMIT, dx)))
+    dy = int(max(-DY_LIMIT, min(DY_LIMIT, dy)))
+
+    dist = math.sqrt(dx * dx + dy * dy)
+
+    # =========================
+    # 状态判断（核心）
+    # =========================
+
+    # ① 接近目标 → 计数稳定
+    if dist < STOP_DIST_THRESHOLD:
+        stable_count += 1
+    else:
+        stable_count = 0
+
+    # =========================
+    # 通信输出（三状态）
+    # =========================
+
+    if not locked:
+        mode = 0x00      # LOST
+        label = "LOST"
+        color = image.COLOR_RED
+
+    elif stable_count >= STABLE_FRAME:
+        mode = 0x02      # DONE
+        label = "DONE"
+        color = image.COLOR_GREEN
+
+        # DONE后自动解锁（进入下一阶段）
+        locked = False
+        locked_target = None
+
+    else:
+        mode = 0x01      # TRACK
+        label = "TRACK"
+        color = image.COLOR_BLUE
+
+    comm.send(mode, dx, dy)
+
+    # =========================
+    # 可视化
+    # =========================
+    img.draw_rect(target.x, target.y, target.w, target.h, color=color)
+    img.draw_cross(cx, cy, color)
+
+    img.draw_string(target.x, target.y - 18, label, color)
+    img.draw_string(2, 2, f"dx:{dx} dy:{dy}", image.COLOR_WHITE)
+
+    img.draw_cross(ref_x, ref_y, image.COLOR_YELLOW)
+
     img.draw_string(
-        ref_draw_x + 5,
-        ref_draw_y - 10,
-        f"REF({REF_X},{REF_Y})",
+        2, 20,
+        f"lock:{locked} stable:{stable_count} fps:{fps.fps():.1f}",
         image.COLOR_YELLOW
     )
 
-    # =========================
-    # FPS显示
-    # =========================
-    img.draw_string(
-        2,
-        20,
-        f"FPS:{fps.fps():.1f}",
-        image.COLOR_YELLOW
-    )
-
-    # 显示图像
     disp.show(img)
