@@ -32,7 +32,7 @@
 
 /* 轮边电机的速度模式参数*/
 #define MOTOR_MAX_RPM                   200   /* 电机最大目标转速，单位RPM，用于限制摇杆映射后的速度 */
-#define MOTOR_ACC                       255    /* Emm_V5速度模式加速度参数，数值越大加减速越快 */
+#define MOTOR_ACC                       200    /* Emm_V5速度模式加速度参数，数值越大加减速越快 */
 
 #define MOTOR_LEFT_FORWARD_DIR            0    /* 左侧电机前进时发送给驱动器的方向值 */
 #define MOTOR_RIGHT_FORWARD_DIR           1    /* 右侧电机前进时发送给驱动器的方向值 */
@@ -75,23 +75,33 @@
 
 /* ============================================================
  *  滑轨4个绝对位置（脉冲数，从零点开始）
+ *  上电回零后自动上升到过渡位13cm
  * ============================================================ */
-#define SLIDE_POS_TRANSIT_MM          150             /* 过渡位 15cm */
-#define SLIDE_POS_TRANSIT            (SLIDE_POS_TRANSIT_MM * SLIDE_PULSES_PER_MM)  /* = 12000脉冲 */
-#define SLIDE_POS_TRAY_PLACE_MM       80             /* 托盘放置位 13cm */
-#define SLIDE_POS_TRAY_PLACE         (SLIDE_POS_TRAY_PLACE_MM * SLIDE_PULSES_PER_MM)  /* = 10400脉冲 */
-#define SLIDE_POS_GRAB_MM             42             /* 物料夹取位 10cm */
-#define SLIDE_POS_GRAB               (SLIDE_POS_GRAB_MM * SLIDE_PULSES_PER_MM)     /* = 8000脉冲 */
-#define SLIDE_POS_PLACE_MM            2              /* 物料放置位 7cm */
-#define SLIDE_POS_PLACE              (SLIDE_POS_PLACE_MM * SLIDE_PULSES_PER_MM)    /* = 5600脉冲 */
+#define SLIDE_POS_TRANSIT_MM          130             /* 过渡位 13cm */
+#define SLIDE_POS_TRANSIT            (SLIDE_POS_TRANSIT_MM * SLIDE_PULSES_PER_MM)  /* = 10400脉冲 */
+#define SLIDE_POS_TRAY_PLACE_MM       100             /* 托盘放置位 10cm */
+#define SLIDE_POS_TRAY_PLACE         (SLIDE_POS_TRAY_PLACE_MM * SLIDE_PULSES_PER_MM)  /* = 8000脉冲 */
+#define SLIDE_POS_TRAY_PICKUP_MM      80             /* 托盘夹取位 10cm（从托盘取料高度） */
+#define SLIDE_POS_TRAY_PICKUP        (SLIDE_POS_TRAY_PICKUP_MM * SLIDE_PULSES_PER_MM) /* = 8000脉冲 */
+#define SLIDE_POS_GRAB_MM             42              /* 物料夹取位 4.2cm */
+#define SLIDE_POS_GRAB               (SLIDE_POS_GRAB_MM * SLIDE_PULSES_PER_MM)     /* = 3360脉冲 */
+/* 物料放置位 ≈ 0cm（零位）。
+ * 注意：本滑轨用碰撞回零(o_mode=2)，绝对0=底部硬限位。
+ * 若直接给0，每次放料都会顶死硬限位→堵转→破坏绝对位置基准，
+ * 导致后续"回过渡位"指令失效。故保留约2mm余量避免顶死，
+ * 物理高度上几乎等同0位放料。
+ * 换算与上面一致：脉冲 = mm × SLIDE_PULSES_PER_MM(80)，2mm×80=160脉冲 */
+#define SLIDE_POS_PLACE_MM            2               /* 物料放置位 2mm（≈0位，留余量防顶死） */
+#define SLIDE_POS_PLACE              (SLIDE_POS_PLACE_MM * SLIDE_PULSES_PER_MM)    /* = 160脉冲 */
+
 
 /* 从过渡位到各位置的相对移动脉冲数（+CCW上升，-CW下降） */
-#define SLIDE_TRANSIT_TO_GRAB         ((int32_t)SLIDE_POS_GRAB   - (int32_t)SLIDE_POS_TRANSIT)  /* -4000（下降5cm） */
-#define SLIDE_GRAB_TO_TRANSIT         ((int32_t)SLIDE_POS_TRANSIT - (int32_t)SLIDE_POS_GRAB)    /* +4000（上升5cm） */
-#define SLIDE_TRANSIT_TO_PLACE        ((int32_t)SLIDE_POS_PLACE   - (int32_t)SLIDE_POS_TRANSIT) /* -6400（下降8cm） */
-#define SLIDE_PLACE_TO_TRANSIT        ((int32_t)SLIDE_POS_TRANSIT - (int32_t)SLIDE_POS_PLACE)   /* +6400（上升8cm） */
-#define SLIDE_TRANSIT_TO_TRAY_PLACE   ((int32_t)SLIDE_POS_TRAY_PLACE - (int32_t)SLIDE_POS_TRANSIT) /* -1600（下降2cm） */
-#define SLIDE_TRAY_PLACE_TO_TRANSIT   ((int32_t)SLIDE_POS_TRANSIT - (int32_t)SLIDE_POS_TRAY_PLACE) /* +1600（上升2cm） */
+#define SLIDE_TRANSIT_TO_GRAB         ((int32_t)SLIDE_POS_GRAB   - (int32_t)SLIDE_POS_TRANSIT)  /* -7040（下降8.8cm） */
+#define SLIDE_GRAB_TO_TRANSIT         ((int32_t)SLIDE_POS_TRANSIT - (int32_t)SLIDE_POS_GRAB)    /* +7040（上升8.8cm） */
+#define SLIDE_TRANSIT_TO_PLACE        ((int32_t)SLIDE_POS_PLACE   - (int32_t)SLIDE_POS_TRANSIT) /* -10400（下降13cm） */
+#define SLIDE_PLACE_TO_TRANSIT        ((int32_t)SLIDE_POS_TRANSIT - (int32_t)SLIDE_POS_PLACE)   /* +10400（上升13cm） */
+#define SLIDE_TRANSIT_TO_TRAY_PLACE   ((int32_t)SLIDE_POS_TRAY_PLACE - (int32_t)SLIDE_POS_TRANSIT) /* -2400（下降3cm） */
+#define SLIDE_TRAY_PLACE_TO_TRANSIT   ((int32_t)SLIDE_POS_TRANSIT - (int32_t)SLIDE_POS_TRAY_PLACE) /* +2400（上升3cm） */
 
 /* 滑轨电机运动等待超时，单位ms */
 #define SLIDE_MOVE_WAIT_MS           2500            /* 单次运动等待完成超时 */
@@ -162,13 +172,14 @@
  * ============================================================ */
 
 /* ----- 夹爪（PC6, 180°舵机）位置 ----- */
-#define CLAW_POS_GRIP             583             /* 夹取位（0°） */
-#define CLAW_POS_RELEASE          250             /* 放料位（60°） */
+#define CLAW_POS_GRIP             250             /* 夹取位（0°） */
+#define CLAW_POS_RELEASE          583             /* 放料位（60°） */
 
 /* ----- 舵机初始化位置 ----- */
-#define CLAW_INIT_POS             250             /* 夹爪初始位置（0°） */
-#define PTZ_INIT_POS              250             /* 云台初始位置（180°） */
-#define TRAY_INIT_POS             250             /* 托盘初始位置（45°） */
+#define CLAW_INIT_POS             583             /* 夹爪初始位置（60°） */
+#define PTZ_INIT_POS              250             /* 云台初始位置（0） */
+#define TRAY_INIT_POS             250             /* 托盘初始位置（0°） */
+
 
 /* ----- 云台（PC7, 270°舵机）位置 ----- */
 #define PTZ_POS_GRIP              250             /* 夹取位（0°） */

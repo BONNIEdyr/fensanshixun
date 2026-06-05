@@ -2,6 +2,13 @@
 #include "servo_pwm.h"
 #include "Emm_V5.h"
 #include "config.h"
+#include "delay.h"
+
+/* 滑轨命令串口保护间隔(ms)：USART1 由滑轨与4个轮边电机共用，驱动器靠串口空闲
+ * (IDLE)分帧。下发滑轨命令前后各留一段静默期，确保其与轮边命令不会在总线上
+ * 粘连成一帧而被驱动器校验失败丢弃。方案B：边移动边取放料时避免滑轨丢命令。 */
+#define SLIDE_CMD_GUARD_MS   5
+
 
 /* ============================================================
  *  包执行器状态机
@@ -32,15 +39,15 @@ static struct {
  *    LOAD_TRAY_1/2/3 与 UNLOAD_TRAY_1/2/3
  *  注释格式：
  *    // N. 动作描述
- *  滑轨4个高度：过渡位15cm / 托盘放置位13cm / 物料夹取位10cm / 物料放置位7cm
+ *  滑轨4个高度：过渡位13cm / 托盘放置位10cm / 物料夹取位4.2cm / 物料放置位0cm（零位）
  *  夹爪：CLAW_POS_GRIP=0°闭合夹取 / CLAW_POS_RELEASE=60°张开放料
  *  云台：PTZ_POS_GRIP=0°夹取位 / PTZ_POS_TRAY1/2/3=托盘位1/2/3
  *  托盘：TRAY_POS_1/2/3/4=托盘1/2/3/4号位
  *  滑轨绝对位置宏（脉冲数）：
- *    SLIDE_POS_TRANSIT       = 12000（过渡位15cm）
- *    SLIDE_POS_TRAY_PLACE    = 10400（托盘放置位13cm）
- *    SLIDE_POS_GRAB          =  8000（物料夹取位10cm）
- *    SLIDE_POS_PLACE         =  5600（物料放置位7cm）
+ *    SLIDE_POS_TRANSIT       = 10400（过渡位13cm）
+ *    SLIDE_POS_TRAY_PLACE    =  8000（托盘放置位10cm）
+ *    SLIDE_POS_GRAB          =  3360（物料夹取位4.2cm）
+ *    SLIDE_POS_PLACE         =     0（物料放置位0cm，零位）
  *   所有滑轨控制使用绝对位置模式 (raF=1)
  * ============================================================ */
 
@@ -52,10 +59,11 @@ static const PackStep_t g_steps_pkg0[] = {
     {PACK_STEP_SERVO,   CLAW_POS_GRIP,   0xFFFF,        0xFFFF,      0,                           15},
     // 3. 滑轨从夹取位回到过渡位（绝对位置12000）
     {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_TRANSIT,           60},
-    // 4. 云台转到托盘位3，只动云台舵机，别的舵机不动
-    {PACK_STEP_SERVO,   0xFFFF,          PTZ_POS_TRAY3, 0xFFFF,      0,                           25},
+    // 4. 云台转到托盘位3，只动云台舵机，别的舵机不动（270°舵机大幅转动，需更长等待）
+    {PACK_STEP_SERVO,   0xFFFF,          PTZ_POS_TRAY3, 0xFFFF,      0,                           45},
     // 5. 滑轨从过渡位下降到物料托盘放置位（绝对位置10400）
     {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_TRAY_PLACE,        40},
+
     // 6. 夹爪从零位回到张开位放料
     {PACK_STEP_SERVO,   CLAW_POS_RELEASE, 0xFFFF,       0xFFFF,      0,                           15},
     // 7. 滑轨回到过渡位（绝对位置12000）
@@ -114,8 +122,8 @@ static const PackStep_t g_steps_pkg3[] = {
 static const PackStep_t g_steps_pkg4[] = {
     // 1. 云台转到托盘1位
     {PACK_STEP_SERVO,   0xFFFF,          PTZ_POS_TRAY1, 0xFFFF,      0,                           25},
-    // 2. 滑轨从过渡位下降到物料托盘放置位13cm（绝对位置10400）
-    {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_TRAY_PLACE,        40},
+    // 2. 滑轨从过渡位下降到托盘夹取位10cm（绝对位置8000）
+    {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_TRAY_PICKUP,       40},
     // 3. 夹爪从张开位回到零位夹取
     {PACK_STEP_SERVO,   CLAW_POS_GRIP,   0xFFFF,        0xFFFF,      0,                           15},
     // 4. 滑轨从托盘放置位回到过渡位（绝对位置12000）
@@ -136,8 +144,8 @@ static const PackStep_t g_steps_pkg4[] = {
 static const PackStep_t g_steps_pkg6[] = {
     // 1. 根据方向键预选的角度，先将托盘转到对应格位（取料前对准），同时云台转到托盘位2
     {PACK_STEP_SERVO,   0xFFFF,          PTZ_POS_TRAY2, 0xFFFF,      0,                      20},
-    // 2. 滑轨从过渡位下降到物料托盘放置位13cm（绝对位置10400）
-    {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_TRAY_PLACE,        40},
+    // 2. 滑轨从过渡位下降到托盘夹取位10cm（绝对位置8000）
+    {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_TRAY_PICKUP,       40},
     // 3. 夹爪从张开位回到零位夹取物料
     {PACK_STEP_SERVO,   CLAW_POS_GRIP,   0xFFFF,        0xFFFF,      0,                           15},
     // 4. 滑轨从托盘放置位回到过渡位（绝对位置12000），夹爪带料上升
@@ -157,9 +165,9 @@ static const PackStep_t g_steps_pkg6[] = {
 /* ---------- UNLOAD_TRAY_3：从托盘3取料 → 放到物料放置位置---------- */
 static const PackStep_t g_steps_pkg7[] = {
     // 1. 云台转到托盘3位
-    {PACK_STEP_SERVO,   0xFFFF,          PTZ_POS_TRAY3, 0xFFFF,      0,                           25},
-    // 2. 滑轨下降到托盘放置位13cm（从托盘3取料，绝对位置10400）
-    {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_TRAY_PLACE,        40},
+    {PACK_STEP_SERVO,   0xFFFF,          PTZ_POS_TRAY3, 0xFFFF,      0,                           45},
+    // 2. 滑轨下降到托盘夹取位10cm（绝对位置8000）
+    {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_TRAY_PICKUP,       40},
     // 3. 夹爪夹取
     {PACK_STEP_SERVO,   CLAW_POS_GRIP,   0xFFFF,        0xFFFF,      0,                           15},
     // 4. 滑轨回到过渡位（绝对位置12000）
@@ -235,16 +243,31 @@ static void Package_ExecuteStep(const PackStep_t *step)
 
     if(tray != 0xFFFF) Servo_Tray_SetPulse(tray);
 
-    /* 设置滑轨（仅当不为0时执行）- 绝对位置模式 raF=1 */
-    if(step->slidePulses != 0)
+    /* 设置滑轨 — 只要步骤类型是滑轨类就下发指令（含目标位置=0零位） */
+    if(step->type == PACK_STEP_SLIDE || step->type == PACK_STEP_ALL)
     {
         // 绝对位置模式：slidePulses 是绝对位置脉冲数（正数）
         // raF=1 绝对位置模式
         uint32_t pulses = (uint32_t)step->slidePulses;
 
+        /* 串口保护间隔（前）：先让总线静默一小段，确保此前可能刚发出的
+         * 轮边电机命令已被驱动器按帧接收完毕，避免与下面的滑轨命令粘连。 */
+        delay_ms(SLIDE_CMD_GUARD_MS);
+
+        /* snF=0：不使用多机同步缓存，指令下发后立即执行。
+         * 注意：若用 snF=1，该指令会进入驱动器同步等待区，必须等到一条
+         * 广播同步命令(Emm_V5_Synchronous_motion_All)才会运动。本工程的
+         * 广播同步只在轮边电机批量发送时触发，导致滑轨在“松开摇杆只做包动作”
+         * 时缓存指令得不到触发 → 表现为偶发性“跳过指令、原地不动”。 */
         Emm_V5_Pos_Control(SLIDE_ADDR, 1, SLIDE_POS_VEL, SLIDE_POS_ACC,
-                           pulses, 1, 1);  // raF=1 绝对位置模式 dir=1向零位上方（正方向）
+                           pulses, 1, 0);  // raF=1 绝对位置模式 dir=1向零位上方（正方向），snF=0 立即执行
+
+        /* 串口保护间隔（后）：发完滑轨命令再静默一小段，让驱动器靠空闲(IDLE)
+         * 确认这条滑轨命令结束，再允许后续轮边命令上总线，杜绝撞帧丢命令。 */
+        delay_ms(SLIDE_CMD_GUARD_MS);
+
         g_pkg.slideTriggered = 1;  // 标记有滑轨运动等待完成
+
     }
     else
     {

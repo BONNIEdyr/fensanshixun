@@ -229,6 +229,8 @@ int main(void)
 	/* 摇杆归零急停计时器（非阻塞，避免 delay_ms 阻塞 PS2_ScanKey） */
 	uint16_t zeroStopTimer = 0;
 	uint8_t  zeroStopArmed = 0;   // 0=未启动, 1=已启动计时
+	uint8_t  zeroStopLocked = 0;  // 1=已彻底锁死，保持静止不再重发命令
+
 
 	/* ----- 边沿检测 & 包执行器 ----- */
 	uint8_t  prevBtn1 = 0;        // 上一次的btn1值，用于按键边沿检测
@@ -259,9 +261,33 @@ int main(void)
 	// 确保滑轨电机静止
 	Emm_V5_Stop_Now(SLIDE_ADDR, 0);
 	delay_ms(MOTOR_CMD_DELAY_MS);
-	/* ===== 滑轨电机5上电后运动到过渡位（绝对位置模式 raF=1） ===== */
+
+	/* ===== 滑轨电机5回零参数配置（有记忆模式：上电自动回零） ===== */
+	// svF=true 存储到驱动器Flash，掉电不丢失
+	// o_mode=2 多圈无限位碰撞回零
+	// o_dir=0  CW方向向下运动寻找零位
+	// potF=true 上电自动触发回零（有记忆模式的核心）
+	Emm_V5_Origin_Modify_Params(SLIDE_ADDR,
+	                            1,                    // svF=true，存储到Flash
+	                            2,                    // o_mode=2，多圈无限位碰撞回零
+	                            0,                    // o_dir=0，CW方向向下碰零位
+	                            SLIDE_HOMING_VEL,     // 回零速度
+	                            SLIDE_HOMING_TIMEOUT_MS,  // 回零超时
+	                            SLIDE_SL_VEL,         // 碰撞检测转速
+	                            SLIDE_SL_MA,          // 碰撞检测电流
+	                            SLIDE_SL_MS,          // 碰撞检测维持时间
+	                            1);                   // potF=true，上电自动触发回零
+	delay_ms(100);
+
+	/* 等待驱动器上电自动回零完成（potF=true 已配置，驱动器上电自动执行回零） */
+	delay_ms(SLIDE_HOMING_TIMEOUT_MS);
+
+	/* ===== 滑轨电机5回零完成后运动到过渡位（绝对位置模式 raF=1） =====
+	 * snF=0：单轴运动立即执行，不进入多机同步缓存。
+	 * 若用 snF=1 会一直等广播同步命令才动，导致上电时滑轨可能不上升到过渡位。 */
 	Emm_V5_Pos_Control(SLIDE_ADDR, 1, SLIDE_POS_VEL, SLIDE_POS_ACC,
-	                   SLIDE_POS_TRANSIT, 1, 1);  // raF=1 绝对位置模式 dir=1向零位上方 → 上升到过渡位15cm
+	                   SLIDE_POS_TRANSIT, 1, 0);  // raF=1 绝对位置模式 dir=1向零位上方 → 上升到过渡位13cm，snF=0 立即执行
+
 	delay_ms(SLIDE_MOVE_WAIT_MS);  // 等待运动完成（上电这里暂保留固定延时）
 
 	while(1)
@@ -470,10 +496,23 @@ int main(void)
 		//    松手回中 → 立即发送速度0让电机按MOTOR_ACC自然减速
 		//    同时启动计时器，计时到后彻底锁死
 		//    如果在计时期间摇杆再次有值 → 取消计时，恢复正常控制
+		//
+		//    【方案B：边移动边取放料】允许包动作执行期间同时遥控小车。
+		//    USART1 由滑轨(地址5)和4个轮边电机共用，驱动器靠串口空闲(IDLE)分帧，
+		//    因此在 Package_ExecuteStep 下发滑轨命令的前后各插入串口保护间隔，
+		//    人为制造空闲期，避免与轮边命令撞帧而丢失滑轨命令。
 		if(forwardSpeed == 0 && strafeSpeed == 0 && rotateSpeed == 0)
+
+
 		{
+			/* 已彻底锁死 → 保持静止，不再重复发送任何命令（避免无意义地
+			 * 周期性占用共用串口，干扰滑轨命令）。直到摇杆再次有值才解除。 */
+			if(zeroStopLocked)
+			{
+				/* 静默，什么都不发 */
+			}
 			// 首次进入 → 立即发送速度0，让电机按MOTOR_ACC减速
-			if(zeroStopArmed == 0)
+			else if(zeroStopArmed == 0)
 			{
 				zeroStopArmed = 1;
 				zeroStopTimer = 0;
@@ -485,20 +524,23 @@ int main(void)
 			else
 			{
 				zeroStopTimer += MAIN_LOOP_DELAY_MS;  // 每轮累加计时
-			}
 
-			// 计时到 → 彻底锁死
-			if(zeroStopTimer >= JOYSTICK_ZERO_STOP_DELAY_MS)
-			{
-				Motor_AllStop(motorAddr);
-				zeroStopArmed = 0;
+				// 计时到 → 彻底锁死一次，随后保持静止不再重发
+				if(zeroStopTimer >= JOYSTICK_ZERO_STOP_DELAY_MS)
+				{
+					Motor_AllStop(motorAddr);
+					zeroStopArmed  = 0;
+					zeroStopLocked = 1;   // 置锁，后续保持静止
+				}
 			}
 		}
 		else
 		{
-			// 摇杆有值 → 取消计时，正常解算
-			zeroStopArmed = 0;
-			zeroStopTimer = 0;
+			// 摇杆有值 → 取消计时与锁死，恢复正常控制
+			zeroStopArmed  = 0;
+			zeroStopTimer  = 0;
+			zeroStopLocked = 0;
+
 
 			// 5. 麦克纳姆轮运动学解算
 			v1 = LimitMotorSpeed((int16_t)(forwardSpeed + strafeSpeed + rotateSpeed)); // 左前
