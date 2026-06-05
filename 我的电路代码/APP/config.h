@@ -77,11 +77,11 @@
  *  滑轨4个绝对位置（脉冲数，从零点开始）
  *  上电回零后自动上升到过渡位13cm
  * ============================================================ */
-#define SLIDE_POS_TRANSIT_MM          130             /* 过渡位 13cm */
+#define SLIDE_POS_TRANSIT_MM          140             /* 过渡位 13cm */
 #define SLIDE_POS_TRANSIT            (SLIDE_POS_TRANSIT_MM * SLIDE_PULSES_PER_MM)  /* = 10400脉冲 */
-#define SLIDE_POS_TRAY_PLACE_MM       100             /* 托盘放置位 10cm */
+#define SLIDE_POS_TRAY_PLACE_MM       110             /* 托盘放置位 10cm */
 #define SLIDE_POS_TRAY_PLACE         (SLIDE_POS_TRAY_PLACE_MM * SLIDE_PULSES_PER_MM)  /* = 8000脉冲 */
-#define SLIDE_POS_TRAY_PICKUP_MM      80             /* 托盘夹取位 10cm（从托盘取料高度） */
+#define SLIDE_POS_TRAY_PICKUP_MM      90             /* 托盘夹取位 10cm（从托盘取料高度） */
 #define SLIDE_POS_TRAY_PICKUP        (SLIDE_POS_TRAY_PICKUP_MM * SLIDE_PULSES_PER_MM) /* = 8000脉冲 */
 #define SLIDE_POS_GRAB_MM             42              /* 物料夹取位 4.2cm */
 #define SLIDE_POS_GRAB               (SLIDE_POS_GRAB_MM * SLIDE_PULSES_PER_MM)     /* = 3360脉冲 */
@@ -172,8 +172,8 @@
  * ============================================================ */
 
 /* ----- 夹爪（PC6, 180°舵机）位置 ----- */
-#define CLAW_POS_GRIP             250             /* 夹取位（0°） */
-#define CLAW_POS_RELEASE          583             /* 放料位（60°） */
+#define CLAW_POS_GRIP             583             /* 夹取位（60°） */
+#define CLAW_POS_RELEASE          250             /* 放料位（0°） */
 
 /* ----- 舵机初始化位置 ----- */
 #define CLAW_INIT_POS             583             /* 夹爪初始位置（60°） */
