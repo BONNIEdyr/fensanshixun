@@ -3,9 +3,9 @@
 <title>Static Call Graph - [.\Objects\Template.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image .\Objects\Template.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060960: Last Updated: Wed Jun 03 15:27:54 2026
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5060960: Last Updated: Fri Jun 05 10:10:17 2026
 <BR><P>
-<H3>Maximum Stack Usage =        184 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
+<H3>Maximum Stack Usage =        192 bytes + Unknown(Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
 main &rArr; Package_Tick &rArr; Package_ExecuteStep &rArr; Emm_V5_Pos_Control &rArr; usart_SendCmd &rArr; usart_SendByte
 <P>
@@ -687,7 +687,8 @@ Global Symbols
 <P><STRONG><a name="[5a]"></a>delay_ms</STRONG> (Thumb, 90 bytes, Stack size 8 bytes, delay.o(i.delay_ms))
 <BR><BR>[Stack]<UL><LI>Max Depth = 8<LI>Call Chain = delay_ms
 </UL>
-<BR>[Called By]<UL><LI><a href="#[46]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
+<BR>[Called By]<UL><LI><a href="#[64]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Package_ExecuteStep
+<LI><a href="#[46]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;main
 <LI><a href="#[59]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Motor_SetSpeed_Batch
 </UL>
 
@@ -703,8 +704,8 @@ Global Symbols
 <BR><BR>[Called By]<UL><LI><a href="#[2f]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;USART1_IRQHandler
 </UL>
 
-<P><STRONG><a name="[46]"></a>main</STRONG> (Thumb, 830 bytes, Stack size 56 bytes, main.o(i.main))
-<BR><BR>[Stack]<UL><LI>Max Depth = 184<LI>Call Chain = main &rArr; Package_Tick &rArr; Package_ExecuteStep &rArr; Emm_V5_Pos_Control &rArr; usart_SendCmd &rArr; usart_SendByte
+<P><STRONG><a name="[46]"></a>main</STRONG> (Thumb, 842 bytes, Stack size 64 bytes, main.o(i.main))
+<BR><BR>[Stack]<UL><LI>Max Depth = 192<LI>Call Chain = main &rArr; Package_Tick &rArr; Package_ExecuteStep &rArr; Emm_V5_Pos_Control &rArr; usart_SendCmd &rArr; usart_SendByte
 </UL>
 <BR>[Calls]<UL><LI><a href="#[5a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;delay_ms
 <LI><a href="#[81]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;board_init
@@ -849,10 +850,11 @@ Local Symbols
 <BR>[Called By]<UL><LI><a href="#[63]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;PS2_ScanKey
 </UL>
 
-<P><STRONG><a name="[64]"></a>Package_ExecuteStep</STRONG> (Thumb, 210 bytes, Stack size 40 bytes, package_action.o(i.Package_ExecuteStep))
+<P><STRONG><a name="[64]"></a>Package_ExecuteStep</STRONG> (Thumb, 222 bytes, Stack size 40 bytes, package_action.o(i.Package_ExecuteStep))
 <BR><BR>[Stack]<UL><LI>Max Depth = 112<LI>Call Chain = Package_ExecuteStep &rArr; Emm_V5_Pos_Control &rArr; usart_SendCmd &rArr; usart_SendByte
 </UL>
-<BR>[Calls]<UL><LI><a href="#[67]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Servo_Tray_SetPulse
+<BR>[Calls]<UL><LI><a href="#[5a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;delay_ms
+<LI><a href="#[67]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Servo_Tray_SetPulse
 <LI><a href="#[66]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Servo_PTZ_SetPulse
 <LI><a href="#[65]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Servo_Claw_SetPulse
 <LI><a href="#[54]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;Emm_V5_Pos_Control
