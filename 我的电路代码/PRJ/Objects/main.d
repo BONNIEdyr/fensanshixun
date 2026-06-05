@@ -21,3 +21,4 @@
 .\objects\main.o: ..\DRIVERS\servo_pwm.h
 .\objects\main.o: ..\APP\config.h
 .\objects\main.o: ..\DRIVERS\package_action.h
+.\objects\main.o: ..\DRIVERS\camera.h

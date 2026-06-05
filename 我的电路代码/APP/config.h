@@ -78,11 +78,11 @@
  * ============================================================ */
 #define SLIDE_POS_TRANSIT_MM          150             /* 过渡位 15cm */
 #define SLIDE_POS_TRANSIT            (SLIDE_POS_TRANSIT_MM * SLIDE_PULSES_PER_MM)  /* = 12000脉冲 */
-#define SLIDE_POS_TRAY_PLACE_MM       130             /* 托盘放置位 13cm */
+#define SLIDE_POS_TRAY_PLACE_MM       80             /* 托盘放置位 13cm */
 #define SLIDE_POS_TRAY_PLACE         (SLIDE_POS_TRAY_PLACE_MM * SLIDE_PULSES_PER_MM)  /* = 10400脉冲 */
-#define SLIDE_POS_GRAB_MM             100             /* 物料夹取位 10cm */
+#define SLIDE_POS_GRAB_MM             42             /* 物料夹取位 10cm */
 #define SLIDE_POS_GRAB               (SLIDE_POS_GRAB_MM * SLIDE_PULSES_PER_MM)     /* = 8000脉冲 */
-#define SLIDE_POS_PLACE_MM            70              /* 物料放置位 7cm */
+#define SLIDE_POS_PLACE_MM            2              /* 物料放置位 7cm */
 #define SLIDE_POS_PLACE              (SLIDE_POS_PLACE_MM * SLIDE_PULSES_PER_MM)    /* = 5600脉冲 */
 
 /* 从过渡位到各位置的相对移动脉冲数（+CCW上升，-CW下降） */
@@ -162,13 +162,13 @@
  * ============================================================ */
 
 /* ----- 夹爪（PC6, 180°舵机）位置 ----- */
-#define CLAW_POS_GRIP             250             /* 夹取位（0°） */
-#define CLAW_POS_RELEASE          583             /* 放料位（60°） */
+#define CLAW_POS_GRIP             583             /* 夹取位（0°） */
+#define CLAW_POS_RELEASE          250             /* 放料位（60°） */
 
 /* ----- 舵机初始化位置 ----- */
 #define CLAW_INIT_POS             250             /* 夹爪初始位置（0°） */
-#define PTZ_INIT_POS              917             /* 云台初始位置（180°） */
-#define TRAY_INIT_POS             417             /* 托盘初始位置（45°） */
+#define PTZ_INIT_POS              250             /* 云台初始位置（180°） */
+#define TRAY_INIT_POS             250             /* 托盘初始位置（45°） */
 
 /* ----- 云台（PC7, 270°舵机）位置 ----- */
 #define PTZ_POS_GRIP              250             /* 夹取位（0°） */
