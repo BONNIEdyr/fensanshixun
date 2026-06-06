@@ -190,11 +190,14 @@ static void Motor_SetPosition_Batch(const uint8_t motorAddr[4],
  */
 static int8_t Camera_ErrorToDirection(int8_t error)
 {
-	if(error > 0) return 1;
-	if(error < 0) return -1;
-	return 0;
-}
+    if(error > 25) return 1;   // 大偏差：4cm，这里先试试2cm，以防走太多
+    if(error > 10) return 1;   // 中偏差：2cm
 
+    if(error < -25) return -2;
+    if(error < -10) return -1;
+
+    return 0;                  // 小偏差：不动（防抖）
+}                              //如果抖，调大阈值，如果停不住，把0区间扩大，比如return 0 if |error| < 10，如果走太慢就改step
 /**
  * @brief  MAIN主程序
  */

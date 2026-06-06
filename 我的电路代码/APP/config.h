@@ -113,7 +113,12 @@
  * ============================================================ */
 #define WHEEL_DIAMETER_MM                  80    /* 麦克纳姆轮直径 */
 #define WHEEL_PULSES_PER_REV             3200    /* 每圈脉冲数 (200步×16细分) */
-#define CAMERA_ALIGN_STEP_PULSES          255    /* 摄像头对准每次步进2cm对应的脉冲数 */
+/* 摄像头对准步长 */
+#define CAMERA_ALIGN_SMALL_STEP_PULSES   128
+#define CAMERA_ALIGN_MID_STEP_PULSES    255
+#define CAMERA_ALIGN_BIG_STEP_PULSES    510      /* 摄像头对准每次步进1、2、4cm对应的脉冲数 */
+#define CAMERA_ERROR_SMALL    15
+#define CAMERA_ERROR_BIG      40/* 误差阈值 */
 #define CAMERA_ALIGN_POS_VEL              100    /* 对准位置模式速度 RPM */
 #define CAMERA_ALIGN_POS_ACC              150    /* 对准位置模式加速度 */
 #define CAMERA_ALIGN_MOVE_TIMEOUT_MS      300    /* 单次2cm位置运动超时 */
