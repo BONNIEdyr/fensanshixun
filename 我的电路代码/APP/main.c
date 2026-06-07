@@ -155,11 +155,31 @@ static void Motor_SetPosition_Batch(const uint8_t motorAddr[4],
 }
 
 /**
- * @brief  将摄像头视觉偏差值转换为移动方向
+ * @brief  将摄像头视觉偏差值转换为离散的三级步长系数
+ * 远距离：大步逼近(2cm)；中距离：中步靠拢(1cm)；近距离：精细微调(0.5cm)
  */
 static int8_t Camera_ErrorToDirection(int8_t error)
 {
-    return error; 
+    int8_t abs_err = (error > 0) ? error : -error;
+    int8_t sign = (error > 0) ? 1 : -1;
+    
+    /* 离散三级步长量化器 */
+    if(abs_err > 40)        // 距离较远：传出大阶梯系数 4
+    {
+        return sign * 4;
+    }
+    else if(abs_err > 15)   // 中等距离：传出中阶梯系数 2
+    {
+        return sign * 2;
+    }
+    else if(abs_err > 3)    // 接近中心：传出小阶梯微调系数 1
+    {
+        return sign * 1;
+    }
+    else                    // 进入死区
+    {
+        return 0;
+    }
 }
 
 /**
@@ -278,7 +298,7 @@ int main(void)
         }
 
         /* ============================================================
-         * 最新修补版：摄像头视觉对准模块（非阻塞并行接收 + 物理断点）
+         * 最新修补版：摄像头视觉对准模块（并行接收 + 阶梯三级步长 + 状态机驱动）
          * ============================================================ */
         if(Package_IsCameraAlignPending())
         {
@@ -287,7 +307,7 @@ int main(void)
             zeroStopTimer = 0;
             zeroStopLocked = 0; 
 
-            /* 1. 【非阻塞运动超时检查】仅做状态恢复，决不 continue 堵死主循环 */
+            /* 1. 【非阻塞运动超时检查】仅做状态恢复 */
             if(cameraMovingActive)
             {
                 cameraMoveWaitTimer += MAIN_LOOP_DELAY_MS;
@@ -299,7 +319,7 @@ int main(void)
                 }
             }
 
-            /* 2. 尝试获取一帧最新摄像头数据（即使在运动中也能实时响应 0x02） */
+            /* 2. 尝试获取一帧最新摄像头数据 */
             if(Camera_GetFrame(&cameraFrame))
             {
                 cameraFrameTimeout = 0;
@@ -318,13 +338,13 @@ int main(void)
                         Motor_AllStop(motorAddr); 
                         delay_ms(50);
                         
-                        /* 🌟【物理动中断点】让小车原地剧烈抖动震下 200ms，宣告视觉完美交卷！ */
+                        /* 🌟【物理动中断点】让小车原地剧烈抖动震下 200ms，宣告视觉交卷！ */
                         Motor_SetPosition_Batch(motorAddr, 15, -15, -15, 15); 
                         delay_ms(200);
                         Motor_AllStop(motorAddr); 
                         delay_ms(50);
 
-                        /* 🌟【核心修复】彻底粉碎摇杆死锁状态 */
+                        /* 彻底粉碎摇杆死锁状态 */
                         zeroStopArmed = 0;
                         zeroStopTimer = 0;
                         zeroStopLocked = 0;
@@ -348,6 +368,7 @@ int main(void)
                     /* 如果上一次的步进动作还没执行完，先不覆盖新的速度命令，保护电机总线 */
                     if(!cameraMovingActive)
                     {
+                        /* 此处已满血复活你的 0.5cm / 1cm / 2cm 阶梯三级步长控制 */
                         cameraForwardDir = Camera_ErrorToDirection(cameraFrame.dy); 
                         cameraStrafeDir  = Camera_ErrorToDirection(cameraFrame.dx); 
 
@@ -401,10 +422,14 @@ int main(void)
 
             prevBtn1 = joystick.btn1;
             prevBtn2 = joystick.btn2;
+            
+            /* 🌟【核心修复点】即使在此处执行 continue 阻断，也必须强行调用一次状态机驱动！ */
+            Package_Tick(); 
+            
             delay_ms(MAIN_LOOP_DELAY_MS);
             continue; 
         }
-		
+        
         // 3. 读取手柄摇杆数据
         forwardSpeed = PS2_AxisToSpeed(joystick.LJoy_UD, 1, MOTOR_MAX_RPM);   
         strafeSpeed  = PS2_AxisToSpeed(joystick.LJoy_LR, 0, MOTOR_MAX_RPM);    
@@ -516,7 +541,7 @@ int main(void)
             }
         }
 
-        // 8. 包执行器 Tick 驱动
+        // 8. 包执行器 Tick 驱动（常规手柄模式下驱动状态机）
         Package_Tick();
 
         prevBtn1 = joystick.btn1;
