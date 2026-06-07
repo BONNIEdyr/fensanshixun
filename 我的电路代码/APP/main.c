@@ -190,13 +190,7 @@ static void Motor_SetPosition_Batch(const uint8_t motorAddr[4],
  */
 static int8_t Camera_ErrorToDirection(int8_t error)
 {
-    if(error > 25) return 1;   // 大偏差：4cm，这里先试试2cm，以防走太多
-    if(error > 10) return 1;   // 中偏差：2cm
-
-    if(error < -25) return -2;
-    if(error < -10) return -1;
-
-    return 0;                  // 小偏差：不动（防抖）
+    return error;                  // 小偏差：不动（防抖）
 }                              //如果抖，调大阈值，如果停不住，把0区间扩大，比如return 0 if |error| < 10，如果走太慢就改step
 /**
  * @brief  MAIN主程序
@@ -353,142 +347,121 @@ int main(void)
 		 *    3. 走完后重新获取下一帧，重复直到偏差=0
 		 *    4. 偏差=0连续CAMERA_STOP_CONFIRM_COUNT帧 → 对准完成
 		 * ============================================================ */
-		if(Package_IsCameraAlignPending())
-		{
-			/* 进入摄像头对准模式时，清除摇杆归零急停状态，避免干扰视觉对准 */
-			zeroStopArmed = 0;
-			zeroStopTimer = 0;
+		
+		/* ============================================================
+         * 最新版：摄像头视觉对准模块（适配 MaixCAM 状态机与动态 ROI）
+         * ============================================================ */
+        if(Package_IsCameraAlignPending())
+        {
+            /* 进入摄像头对准模式时，清除摇杆归零急停状态，避免干扰视觉对准 */
+            zeroStopArmed = 0;
+            zeroStopTimer = 0;
 
-			/*
-			 * 如果当前正在等待上一次位置移动完成：
-			 *   - 检查超时
-			 *   - 超时则强制停止并重置状态，重新获取帧
-			 *   - 未超时则继续等待下一轮
-			 */
-			if(cameraMovingActive)
-			{
-				cameraMoveWaitTimer += MAIN_LOOP_DELAY_MS;
-				if(cameraMoveWaitTimer >= CAMERA_ALIGN_MOVE_TIMEOUT_MS)
-				{
-					/* 超时：强制停止所有电机，重置状态，重新开始对准 */
-					Motor_AllStop(motorAddr);
-					cameraMovingActive = 0;
-					cameraMoveWaitTimer = 0;
-				}
-				/* 未超时 → 继续等待运动完成，本轮跳过摄像头帧获取 */
-				prevBtn1 = joystick.btn1;
-				prevBtn2 = joystick.btn2;
-				delay_ms(MAIN_LOOP_DELAY_MS);
-				continue;
-			}
+            /* 1. 如果当前正在等待上一次的步进位置移动完成 */
+            if(cameraMovingActive)
+            {
+                cameraMoveWaitTimer += MAIN_LOOP_DELAY_MS;
+                if(cameraMoveWaitTimer >= CAMERA_ALIGN_MOVE_TIMEOUT_MS)
+                {
+                    /* 超时保护：强制停止所有电机，重置状态，允许接收新一帧 */
+                    Motor_AllStop(motorAddr);
+                    cameraMovingActive = 0;
+                    cameraMoveWaitTimer = 0;
+                }
+                /* 未超时 → 继续等待步进结束，本轮跳过视觉帧读取 */
+                prevBtn1 = joystick.btn1;
+                prevBtn2 = joystick.btn2;
+                delay_ms(MAIN_LOOP_DELAY_MS);
+                continue;
+            }
 
-			/* ----- 尝试获取一帧摄像头数据 ----- */
-			if(Camera_GetFrame(&cameraFrame))
-			{
-				/* 成功获取到帧，重置超时计数器 */
-				cameraFrameTimeout = 0;
+            /* 2. 尝试获取一帧最新摄像头数据 */
+            if(Camera_GetFrame(&cameraFrame))
+            {
+                /* 成功获取到帧，重置通信超时计数器 */
+                cameraFrameTimeout = 0;
 
-				/*
-				 * 判断条件：mode == NONE 且 dx==0 且 dy==0
-				 * 表示OpenMV识别到物体已位于图像中心，或者未检测到目标物体
-				 * （即偏差为零 → 已对准或无需调整）
-				 */
-				if(cameraFrame.mode == CAMERA_MODE_NONE && cameraFrame.dx == 0 && cameraFrame.dy == 0)
-				{
-					/*
-					 * 防抖处理：连续CAMERA_STOP_CONFIRM_COUNT次
-					 * 检测到偏差为0才判定为真正对准完成，避免偶发噪声误判
-					 */
-					if(cameraStopCount < CAMERA_STOP_CONFIRM_COUNT)
-					{
-						cameraStopCount++;
-					}
+                /* ---- 分支 A：对准完成 (MODE_DONE = 0x02) ---- */
+                if(cameraFrame.mode == 0x02) 
+                {
+                    if(cameraStopCount < CAMERA_STOP_CONFIRM_COUNT)
+                    {
+                        cameraStopCount++;
+                    }
 
-					/* 达到确认次数 → 对准完成 */
-					if(cameraStopCount >= CAMERA_STOP_CONFIRM_COUNT)
-					{
-						Motor_AllStop(motorAddr);                /* 急停锁定所有电机 */
-						Package_CameraAlignDone();               /* 通知包执行器摄像头对准完成，继续后续动作 */
-						Camera_ResetFrameState();                 /* 复位摄像头帧状态机，准备下一次识别 */
-						cameraStopCount = 0;                      /* 复位停止计数器 */
-						cameraMovingActive = 0;                   /* 复位位置移动状态 */
-					}
-				}
-				else
-				{
-					/*
-					 * 偏差不为零 → 需要调整位置
-					 * 重置停止计数器，防止未对准时误判
-					 */
-					cameraStopCount = 0;
+                    if(cameraStopCount >= CAMERA_STOP_CONFIRM_COUNT)
+                    {
+                        Motor_AllStop(motorAddr);               /* 急停锁定所有电机 */
+                        Package_CameraAlignDone();              /* 通知包执行器，继续后续抓取/放置动作 */
+                        Camera_ResetFrameState();               /* 复位摄像头状态机 */
+                        cameraStopCount = 0;
+                        cameraMovingActive = 0;
+                    }
+                }
+                /* ---- 分支 B：正在追踪中 (MODE_TRACK = 0x01) ---- */
+                else if(cameraFrame.mode == 0x01)
+                {
+                    cameraStopCount = 0; // 只要处于追踪状态，就清空对准计数
 
-					/*
-					 * 将偏差映射为移动方向（位置模式）：
-					 *   forwardDir ← dy（前后方向：1=前进 / -1=后退 / 0=不动）
-					 *   strafeDir  ← dx（左右方向：1=右移 / -1=左移 / 0=不动）
-					 */
-					cameraForwardDir = Camera_ErrorToDirection(cameraFrame.dy);
-					cameraStrafeDir  = Camera_ErrorToDirection(cameraFrame.dx);
+                    /* 直接通过我们重写的函数获取4轮移动倍率 */
+                    cameraForwardDir = Camera_ErrorToDirection(cameraFrame.dy); // dy代表前后控制量(-3~3)
+                    cameraStrafeDir  = Camera_ErrorToDirection(cameraFrame.dx); // dx代表左右控制量(-3~3)
 
-					/*
-					 * 麦克纳姆轮方向解算（位置模式）：
-					 * 方向映射与速度模式一致，但用方向值(±1)替代速度值
-					 *   dir1(左前) = forwardDir + strafeDir
-					 *   dir2(右前) = forwardDir - strafeDir
-					 *   dir3(左后) = forwardDir - strafeDir
-					 *   dir4(右后) = forwardDir + strafeDir
-					 *
-					 * 注意：方向值可能为 -2/-1/0/1/2，
-					 *       ±2 表示该轮需走双倍距离（对角线移动）
-					 */
-					v1 = (int16_t)cameraForwardDir + (int16_t)cameraStrafeDir;
-					v2 = (int16_t)cameraForwardDir - (int16_t)cameraStrafeDir;
-					v3 = (int16_t)cameraForwardDir - (int16_t)cameraStrafeDir;
-					v4 = (int16_t)cameraForwardDir + (int16_t)cameraStrafeDir;
+                    /* 麦克纳姆轮相对位置移动方向解算 */
+                    v1 = (int16_t)cameraForwardDir + (int16_t)cameraStrafeDir; // 左前
+                    v2 = (int16_t)cameraForwardDir - (int16_t)cameraStrafeDir; // 右前
+                    v3 = (int16_t)cameraForwardDir - (int16_t)cameraStrafeDir; // 左后
+                    v4 = (int16_t)cameraForwardDir + (int16_t)cameraStrafeDir; // 右后
 
-					/* 限幅到 -128~+127（int8_t 范围），然后用 int8_t 传递方向值 */
-					if(v1 > 127) v1 = 127; else if(v1 < -128) v1 = -128;
-					if(v2 > 127) v2 = 127; else if(v2 < -128) v2 = -128;
-					if(v3 > 127) v3 = 127; else if(v3 < -128) v3 = -128;
-					if(v4 > 127) v4 = 127; else if(v4 < -128) v4 = -128;
+                    /* 限幅到 int8_t 范围内 */
+                    if(v1 > 127) v1 = 127; else if(v1 < -128) v1 = -128;
+                    if(v2 > 127) v2 = 127; else if(v2 < -128) v2 = -128;
+                    if(v3 > 127) v3 = 127; else if(v3 < -128) v3 = -128;
+                    if(v4 > 127) v4 = 127; else if(v4 < -128) v4 = -128;
 
-					/* 批量下发相对位置指令（每次2cm）+ 广播同步触发 */
-					Motor_SetPosition_Batch(motorAddr,
-					                        (int8_t)v1, (int8_t)v2,
-					                        (int8_t)v3, (int8_t)v4);
+                    /* 如果解算出来有动作（任意轮子步进不为0） */
+                    if(v1 != 0 || v2 != 0 || v3 != 0 || v4 != 0)
+                    {
+                        /* 下发相对位置指令（脉冲数会自动乘以方向倍率） */
+                        Motor_SetPosition_Batch(motorAddr, (int8_t)v1, (int8_t)v2, (int8_t)v3, (int8_t)v4);
+                        
+                        /* 激活步进锁：等待这步走完，再去看下一帧 */
+                        cameraMovingActive = 1;
+                        cameraMoveWaitTimer = 0;
+                    }
+                }
+                /* ---- 分支 C：目标丢失 (MODE_LOST = 0x00) ---- */
+                else if(cameraFrame.mode == 0x00)
+                {
+                    cameraStopCount = 0;
+                    // 可选：目标丢失时让小车原地静止不动，等待 Python 端依靠动态 ROI 或全屏搜索找回目标
+                    Motor_AllStop(motorAddr); 
+                }
+            }
+            /* 3. 获取帧失败（串口丢包/断连保护） */
+            else
+            {
+                if(cameraFrameTimeout < CAMERA_FRAME_TIMEOUT_MS)
+                {
+                    cameraFrameTimeout += MAIN_LOOP_DELAY_MS;
+                }
+                else
+                {
+                    /* 长期收不到视觉信号，强制急停并退出对准模式 */
+                    Motor_AllStop(motorAddr);
+                    Package_Stop();
+                    Camera_ResetFrameState();
+                    cameraStopCount = 0;
+                    cameraFrameTimeout = 0;
+                    cameraMovingActive = 0;
+                }
+            }
 
-					/* 标记正在移动，开始超时计时 */
-					cameraMovingActive = 1;
-					cameraMoveWaitTimer = 0;
-				}
-			}
-			else
-			{
-				/*
-				 * 获取帧失败（如串口接收中断、帧校验错误等）
-				 * 启动超时计数器：若持续CAMERA_FRAME_TIMEOUT_MS收不到有效帧，
-				 * 则急停电机、退出摄像头对准模式，回到正常摇杆控制状态
-				 */
-				if(cameraFrameTimeout < CAMERA_FRAME_TIMEOUT_MS)
-				{
-					cameraFrameTimeout += MAIN_LOOP_DELAY_MS;
-				}
-				else
-				{
-					Motor_AllStop(motorAddr);          /* 急停所有电机 */
-					Package_Stop();                     /* 退出摄像头对准模式 */
-					Camera_ResetFrameState();           /* 复位摄像头帧状态机 */
-					cameraStopCount = 0;                 /* 复位停止确认计数 */
-					cameraFrameTimeout = 0;              /* 复位超时计时器 */
-					cameraMovingActive = 0;              /* 复位位置移动等待状态 */
-				}
-			}
-
-			prevBtn1 = joystick.btn1;
-			prevBtn2 = joystick.btn2;
-			delay_ms(MAIN_LOOP_DELAY_MS);
-			continue;
-		}
+            prevBtn1 = joystick.btn1;
+            prevBtn2 = joystick.btn2;
+            delay_ms(MAIN_LOOP_DELAY_MS);
+            continue;
+        }
 
 		// 3. 读取手柄摇杆数据
 		forwardSpeed = PS2_AxisToSpeed(joystick.LJoy_UD, 1, MOTOR_MAX_RPM);   // 左摇杆上下：前进

@@ -106,24 +106,28 @@
 /* 滑轨电机运动等待超时，单位ms */
 #define SLIDE_MOVE_WAIT_MS           2500            /* 单次运动等待完成超时 */
 
+
 /* ============================================================
- *  轮边电机位置模式参数（摄像头视觉对准用）
- *  轮径80mm, 周长≈251.33mm, 3200 pulse/rev (1.8°电机+16细分)
- *  2cm = 20mm → 20/251.33×3200 ≈ 255 pulse
+ * 轮边电机位置模式参数（最新视觉对准与动态 ROI 适配）
+ * 轮径80mm, 周长≈251.33mm, 3200 pulse/rev (1.8°电机+16细分)
  * ============================================================ */
 #define WHEEL_DIAMETER_MM                  80    /* 麦克纳姆轮直径 */
 #define WHEEL_PULSES_PER_REV             3200    /* 每圈脉冲数 (200步×16细分) */
-/* 摄像头对准步长 */
-#define CAMERA_ALIGN_SMALL_STEP_PULSES   128
-#define CAMERA_ALIGN_MID_STEP_PULSES    255
-#define CAMERA_ALIGN_BIG_STEP_PULSES    510      /* 摄像头对准每次步进1、2、4cm对应的脉冲数 */
-#define CAMERA_ERROR_SMALL    15
-#define CAMERA_ERROR_BIG      40/* 误差阈值 */
-#define CAMERA_ALIGN_POS_VEL              100    /* 对准位置模式速度 RPM */
-#define CAMERA_ALIGN_POS_ACC              150    /* 对准位置模式加速度 */
-#define CAMERA_ALIGN_MOVE_TIMEOUT_MS      300    /* 单次2cm位置运动超时 */
-#define CAMERA_STOP_CONFIRM_COUNT           3    /* 摄像头对准完成防抖：连续该次数偏差为0才算对准完成 */
-#define CAMERA_FRAME_TIMEOUT_MS           300    /* 摄像头帧超时：连续收不到有效帧超过此时间则退出摄像头对准 */
+
+/* 适配最新 Python 端传回的 1、2、3 级量化控制量 */
+/* 基础单步步进脉冲数（对应控制量为 1 时，走约 0.5 cm，用于精细微调） */
+#define CAMERA_ALIGN_BASE_STEP_PULSES    64  
+#define CAMERA_ALIGN_STEP_PULSES         CAMERA_ALIGN_BASE_STEP_PULSES 
+
+/* 运动学性能调优 */
+#define CAMERA_ALIGN_POS_VEL              150    /* 对准位置模式速度提升至 150 RPM，缩短单步调整时间 */
+#define CAMERA_ALIGN_POS_ACC              250    /* 对准加速度提升至 250，起步和刹车更干脆，减少拖泥带水 */
+#define CAMERA_ALIGN_MOVE_TIMEOUT_MS      100    /* 单次步进运动超时缩短至 100ms（配合主循环20ms，走完立刻读下一帧） */
+
+/* 状态机与安全门控参数 */
+#define CAMERA_STOP_CONFIRM_COUNT           3    /* 摄像头对准完成防抖：连续 3 次检测到完成状态(0x02)才判定真正完成 */
+#define CAMERA_FRAME_TIMEOUT_MS           300    /* 摄像头帧超时：连续 300ms 收不到有效帧则强制退出对准 */
+
 #endif /* __CONFIG_H */
 
 
@@ -220,5 +224,3 @@
 #define PS2_CS_PIN                     GPIO_Pin_6 /* PS2片选CS引脚，拉低时开始通信 */
 #define PS2_CLK_PIN                    GPIO_Pin_7 /* PS2时钟CLK引脚，用于模拟通信时序 */
 #define PS2_BIT_DELAY_US                 16    /* PS2每一位读写之间的延时，单位us */
-
-
