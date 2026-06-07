@@ -363,21 +363,21 @@ Image Symbol Table
 
     Symbol Name                              Value     Ov Type        Size  Object(Section)
 
-    ../clib/microlib/init/entry.s            0x00000000   Number         0  entry9a.o ABSOLUTE
-    ../clib/microlib/init/entry.s            0x00000000   Number         0  entry2.o ABSOLUTE
-    ../clib/microlib/init/entry.s            0x00000000   Number         0  entry.o ABSOLUTE
     ../clib/microlib/init/entry.s            0x00000000   Number         0  entry12b.o ABSOLUTE
-    ../clib/microlib/init/entry.s            0x00000000   Number         0  entry8b.o ABSOLUTE
+    ../clib/microlib/init/entry.s            0x00000000   Number         0  entry2.o ABSOLUTE
+    ../clib/microlib/init/entry.s            0x00000000   Number         0  entry8a.o ABSOLUTE
     ../clib/microlib/init/entry.s            0x00000000   Number         0  entry12a.o ABSOLUTE
-    ../clib/microlib/init/entry.s            0x00000000   Number         0  entry7b.o ABSOLUTE
-    ../clib/microlib/init/entry.s            0x00000000   Number         0  entry9b.o ABSOLUTE
-    ../clib/microlib/init/entry.s            0x00000000   Number         0  entry7a.o ABSOLUTE
     ../clib/microlib/init/entry.s            0x00000000   Number         0  entry11b.o ABSOLUTE
-    ../clib/microlib/init/entry.s            0x00000000   Number         0  entry5.o ABSOLUTE
     ../clib/microlib/init/entry.s            0x00000000   Number         0  entry11a.o ABSOLUTE
     ../clib/microlib/init/entry.s            0x00000000   Number         0  entry10b.o ABSOLUTE
+    ../clib/microlib/init/entry.s            0x00000000   Number         0  entry7a.o ABSOLUTE
+    ../clib/microlib/init/entry.s            0x00000000   Number         0  entry7b.o ABSOLUTE
     ../clib/microlib/init/entry.s            0x00000000   Number         0  entry10a.o ABSOLUTE
-    ../clib/microlib/init/entry.s            0x00000000   Number         0  entry8a.o ABSOLUTE
+    ../clib/microlib/init/entry.s            0x00000000   Number         0  entry5.o ABSOLUTE
+    ../clib/microlib/init/entry.s            0x00000000   Number         0  entry8b.o ABSOLUTE
+    ../clib/microlib/init/entry.s            0x00000000   Number         0  entry.o ABSOLUTE
+    ../clib/microlib/init/entry.s            0x00000000   Number         0  entry9a.o ABSOLUTE
+    ../clib/microlib/init/entry.s            0x00000000   Number         0  entry9b.o ABSOLUTE
     ../clib/microlib/string/memset.c         0x00000000   Number         0  memseta.o ABSOLUTE
     ..\APP\main.c                            0x00000000   Number         0  main.o ABSOLUTE
     ..\APP\stm32f10x_it.c                    0x00000000   Number         0  stm32f10x_it.o ABSOLUTE
@@ -502,20 +502,21 @@ Image Symbol Table
     i.fifo_enQueue                           0x080013fc   Section        0  fifo.o(i.fifo_enQueue)
     i.fifo_queueLength                       0x0800142c   Section        0  fifo.o(i.fifo_queueLength)
     i.main                                   0x08001468   Section        0  main.o(i.main)
-    i.nvic_init                              0x080017b8   Section        0  board.o(i.nvic_init)
-    i.usart_SendByte                         0x080017e0   Section        0  usart.o(i.usart_SendByte)
-    i.usart_SendCmd                          0x0800181c   Section        0  usart.o(i.usart_SendCmd)
-    i.usart_init                             0x08001848   Section        0  board.o(i.usart_init)
-    .constdata                               0x080018e4   Section        9  ps2.o(.constdata)
-    ps2_cmd                                  0x080018e4   Data           9  ps2.o(.constdata)
-    .constdata                               0x080018f0   Section      912  package_action.o(.constdata)
-    g_steps_pkg0                             0x080018f0   Data         144  package_action.o(.constdata)
-    g_steps_pkg1                             0x08001980   Data         144  package_action.o(.constdata)
-    g_steps_pkg3                             0x08001a10   Data         144  package_action.o(.constdata)
-    g_steps_pkg4                             0x08001aa0   Data         144  package_action.o(.constdata)
-    g_steps_pkg6                             0x08001b30   Data         144  package_action.o(.constdata)
-    g_steps_pkg7                             0x08001bc0   Data         144  package_action.o(.constdata)
-    g_packages                               0x08001c50   Data          48  package_action.o(.constdata)
+    i.nvic_init                              0x080017d0   Section        0  board.o(i.nvic_init)
+    i.usart_SendByte                         0x080017f8   Section        0  usart.o(i.usart_SendByte)
+    i.usart_SendCmd                          0x08001834   Section        0  usart.o(i.usart_SendCmd)
+    i.usart_init                             0x08001860   Section        0  board.o(i.usart_init)
+    .constdata                               0x080018fc   Section        9  ps2.o(.constdata)
+    ps2_cmd                                  0x080018fc   Data           9  ps2.o(.constdata)
+    .constdata                               0x08001908   Section     1064  package_action.o(.constdata)
+    g_steps_pkg0                             0x08001908   Data         144  package_action.o(.constdata)
+    g_steps_pkg1                             0x08001998   Data         144  package_action.o(.constdata)
+    g_steps_pkg3                             0x08001a28   Data         144  package_action.o(.constdata)
+    g_steps_pkg4                             0x08001ab8   Data         144  package_action.o(.constdata)
+    g_steps_pkg6                             0x08001b48   Data         144  package_action.o(.constdata)
+    g_steps_pkg7                             0x08001bd8   Data         144  package_action.o(.constdata)
+    g_steps_pkg8                             0x08001c68   Data         144  package_action.o(.constdata)
+    g_packages                               0x08001cf8   Data          56  package_action.o(.constdata)
     .data                                    0x20000000   Section        2  usart.o(.data)
     .data                                    0x20000004   Section       20  system_stm32f10x.o(.data)
     .data                                    0x20000018   Section       10  package_action.o(.data)
@@ -686,13 +687,13 @@ Image Symbol Table
     fifo_deQueue                             0x080013cd   Thumb Code    44  fifo.o(i.fifo_deQueue)
     fifo_enQueue                             0x080013fd   Thumb Code    42  fifo.o(i.fifo_enQueue)
     fifo_queueLength                         0x0800142d   Thumb Code    56  fifo.o(i.fifo_queueLength)
-    main                                     0x08001469   Thumb Code   842  main.o(i.main)
-    nvic_init                                0x080017b9   Thumb Code    40  board.o(i.nvic_init)
-    usart_SendByte                           0x080017e1   Thumb Code    56  usart.o(i.usart_SendByte)
-    usart_SendCmd                            0x0800181d   Thumb Code    44  usart.o(i.usart_SendCmd)
-    usart_init                               0x08001849   Thumb Code   148  board.o(i.usart_init)
-    Region$$Table$$Base                      0x08001c80   Number         0  anon$$obj.o(Region$$Table)
-    Region$$Table$$Limit                     0x08001ca0   Number         0  anon$$obj.o(Region$$Table)
+    main                                     0x08001469   Thumb Code   868  main.o(i.main)
+    nvic_init                                0x080017d1   Thumb Code    40  board.o(i.nvic_init)
+    usart_SendByte                           0x080017f9   Thumb Code    56  usart.o(i.usart_SendByte)
+    usart_SendCmd                            0x08001835   Thumb Code    44  usart.o(i.usart_SendCmd)
+    usart_init                               0x08001861   Thumb Code   148  board.o(i.usart_init)
+    Region$$Table$$Base                      0x08001d30   Number         0  anon$$obj.o(Region$$Table)
+    Region$$Table$$Limit                     0x08001d50   Number         0  anon$$obj.o(Region$$Table)
     rxFrameFlag                              0x20000000   Data           1  usart.o(.data)
     rxCount                                  0x20000001   Data           1  usart.o(.data)
     SystemCoreClock                          0x20000004   Data           4  system_stm32f10x.o(.data)
@@ -710,9 +711,9 @@ Memory Map of the image
 
   Image Entry point : 0x08000131
 
-  Load Region LR_IROM1 (Base: 0x08000000, Size: 0x00001cd8, Max: 0x00010000, ABSOLUTE)
+  Load Region LR_IROM1 (Base: 0x08000000, Size: 0x00001d88, Max: 0x00010000, ABSOLUTE)
 
-    Execution Region ER_IROM1 (Exec base: 0x08000000, Load base: 0x08000000, Size: 0x00001ca0, Max: 0x00010000, ABSOLUTE)
+    Execution Region ER_IROM1 (Exec base: 0x08000000, Load base: 0x08000000, Size: 0x00001d50, Max: 0x00010000, ABSOLUTE)
 
     Exec Addr    Load Addr    Size         Type   Attr      Idx    E Section Name        Object
 
@@ -813,31 +814,31 @@ Memory Map of the image
     0x080013cc   0x080013cc   0x00000030   Code   RO          378    i.fifo_deQueue      fifo.o
     0x080013fc   0x080013fc   0x00000030   Code   RO          379    i.fifo_enQueue      fifo.o
     0x0800142c   0x0800142c   0x0000003c   Code   RO          381    i.fifo_queueLength  fifo.o
-    0x08001468   0x08001468   0x00000350   Code   RO            7    i.main              main.o
-    0x080017b8   0x080017b8   0x00000028   Code   RO          298    i.nvic_init         board.o
-    0x080017e0   0x080017e0   0x0000003c   Code   RO          263    i.usart_SendByte    usart.o
-    0x0800181c   0x0800181c   0x0000002c   Code   RO          264    i.usart_SendCmd     usart.o
-    0x08001848   0x08001848   0x0000009c   Code   RO          299    i.usart_init        board.o
-    0x080018e4   0x080018e4   0x00000009   Data   RO          443    .constdata          ps2.o
-    0x080018ed   0x080018ed   0x00000003   PAD
-    0x080018f0   0x080018f0   0x00000390   Data   RO          513    .constdata          package_action.o
-    0x08001c80   0x08001c80   0x00000020   Data   RO         1663    Region$$Table       anon$$obj.o
+    0x08001468   0x08001468   0x00000368   Code   RO            7    i.main              main.o
+    0x080017d0   0x080017d0   0x00000028   Code   RO          298    i.nvic_init         board.o
+    0x080017f8   0x080017f8   0x0000003c   Code   RO          263    i.usart_SendByte    usart.o
+    0x08001834   0x08001834   0x0000002c   Code   RO          264    i.usart_SendCmd     usart.o
+    0x08001860   0x08001860   0x0000009c   Code   RO          299    i.usart_init        board.o
+    0x080018fc   0x080018fc   0x00000009   Data   RO          443    .constdata          ps2.o
+    0x08001905   0x08001905   0x00000003   PAD
+    0x08001908   0x08001908   0x00000428   Data   RO          513    .constdata          package_action.o
+    0x08001d30   0x08001d30   0x00000020   Data   RO         1663    Region$$Table       anon$$obj.o
 
 
-    Execution Region RW_IRAM1 (Exec base: 0x20000000, Load base: 0x08001ca0, Size: 0x000009c8, Max: 0x00005000, ABSOLUTE)
+    Execution Region RW_IRAM1 (Exec base: 0x20000000, Load base: 0x08001d50, Size: 0x000009c8, Max: 0x00005000, ABSOLUTE)
 
     Exec Addr    Load Addr    Size         Type   Attr      Idx    E Section Name        Object
 
-    0x20000000   0x08001ca0   0x00000002   Data   RW          266    .data               usart.o
-    0x20000002   0x08001ca2   0x00000002   PAD
-    0x20000004   0x08001ca4   0x00000014   Data   RW          348    .data               system_stm32f10x.o
-    0x20000018   0x08001cb8   0x0000000a   Data   RW          514    .data               package_action.o
-    0x20000022   0x08001cc2   0x00000014   Data   RW          708    .data               stm32f10x_rcc.o
-    0x20000036   0x08001cd6   0x00000002   PAD
+    0x20000000   0x08001d50   0x00000002   Data   RW          266    .data               usart.o
+    0x20000002   0x08001d52   0x00000002   PAD
+    0x20000004   0x08001d54   0x00000014   Data   RW          348    .data               system_stm32f10x.o
+    0x20000018   0x08001d68   0x0000000a   Data   RW          514    .data               package_action.o
+    0x20000022   0x08001d72   0x00000014   Data   RW          708    .data               stm32f10x_rcc.o
+    0x20000036   0x08001d86   0x00000002   PAD
     0x20000038        -       0x00000080   Zero   RW          265    .bss                usart.o
     0x200000b8        -       0x00000102   Zero   RW          383    .bss                fifo.o
     0x200001ba        -       0x00000009   Zero   RW          442    .bss                ps2.o
-    0x200001c3   0x08001cd6   0x00000005   PAD
+    0x200001c3   0x08001d86   0x00000005   PAD
     0x200001c8        -       0x00000800   Zero   RW          337    STACK               startup_stm32f10x_hd.o
 
 
@@ -853,9 +854,9 @@ Image component sizes
         96          6          0          0          0       1007   delay.o
        452          0          0          0          0       3878   emm_v5.o
        156         14          0          0        258       2646   fifo.o
-      1102          6          0          0          0     260447   main.o
+      1126          4          0          0          0     260495   main.o
        132         22          0          0          0       1895   misc.o
-       608         38        912         10          0       5161   package_action.o
+       608         38       1064         10          0       5201   package_action.o
        340         32          9          0          9       3345   ps2.o
        252         28          0          0          0       2338   servo_pwm.o
         36          8        304          0       2048        804   startup_stm32f10x_hd.o
@@ -868,7 +869,7 @@ Image component sizes
        240         20          0          2        128       2529   usart.o
 
     ----------------------------------------------------------------------
-      5942        334       1260         56       2448     317329   Object Totals
+      5966        332       1412         56       2448     317417   Object Totals
          0          0         32          0          0          0   (incl. Generated)
         18          0          3          4          5          0   (incl. Padding)
 
@@ -909,15 +910,15 @@ Image component sizes
 
       Code (inc. data)   RO Data    RW Data    ZI Data      Debug   
 
-      6068        350       1260         56       2448     313913   Grand Totals
-      6068        350       1260         56       2448     313913   ELF Image Totals
-      6068        350       1260         56          0          0   ROM Totals
+      6092        348       1412         56       2448     314001   Grand Totals
+      6092        348       1412         56       2448     314001   ELF Image Totals
+      6092        348       1412         56          0          0   ROM Totals
 
 ==============================================================================
 
-    Total RO  Size (Code + RO Data)                 7328 (   7.16kB)
+    Total RO  Size (Code + RO Data)                 7504 (   7.33kB)
     Total RW  Size (RW Data + ZI Data)              2504 (   2.45kB)
-    Total ROM Size (Code + RO Data + RW Data)       7384 (   7.21kB)
+    Total ROM Size (Code + RO Data + RW Data)       7560 (   7.38kB)
 
 ==============================================================================
 

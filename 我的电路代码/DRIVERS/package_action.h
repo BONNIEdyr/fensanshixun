@@ -60,6 +60,7 @@ typedef enum {
     UNLOAD_TRAY_1,
     UNLOAD_TRAY_2,
     UNLOAD_TRAY_3,
+    LOAD_TRAY_2_FROM_PLACE,   // 与 LOAD_TRAY_2 相同，但夹取时滑轨下降到物料放置位(零位)
 } PackID_t;
 
 /**

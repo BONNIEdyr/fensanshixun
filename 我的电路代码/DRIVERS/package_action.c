@@ -183,6 +183,29 @@ static const PackStep_t g_steps_pkg7[] = {
     {PACK_STEP_END,     0, 0, 0, 0, 0},
 };
 
+/* ---------- LOAD_TRAY_2_FROM_PLACE：从物料放置位(零位)夹取 → 云台转到托盘2号位 → 放到托盘2号位 ----------
+ * 与 LOAD_TRAY_2 完全相同，唯一区别：第1步滑轨下降到物料放置位(零位)夹取，而非物料夹取位 */
+static const PackStep_t g_steps_pkg8[] = {
+    // 1. 滑轨从过渡位下降到物料放置位（绝对位置0，零位）夹取
+    {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_PLACE,             60},
+    // 2. 夹爪从张开位回到零位夹取
+    {PACK_STEP_SERVO,   CLAW_POS_GRIP,   0xFFFF,        0xFFFF,      0,                           15},
+    // 3. 滑轨从夹取位回到过渡位（绝对位置12000）
+    {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_TRANSIT,           60},
+    // 4. 云台转到托盘位2，同时根据当前选择动态设置托盘舵机角度
+    {PACK_STEP_SERVO,   0xFFFF,          PTZ_POS_TRAY2, TRAY_POS_DYNAMIC, 0,                        25},
+    // 5. 滑轨从过渡位下降到物料托盘放置位（绝对位置10400）
+    {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_TRAY_PLACE,        40},
+    // 6. 夹爪从零位回到张开位放料
+    {PACK_STEP_SERVO,   CLAW_POS_RELEASE, 0xFFFF,       0xFFFF,      0,                           15},
+    // 7. 滑轨回到过渡位（绝对位置12000）
+    {PACK_STEP_SLIDE,   0xFFFF,          0xFFFF,        0xFFFF,      SLIDE_POS_TRANSIT,           60},
+    // 8. 云台转回夹取位，别的舵机不动
+    {PACK_STEP_SERVO,   0xFFFF,          PTZ_POS_GRIP,  0xFFFF,      0,                           25},
+    // 结束
+    {PACK_STEP_END,     0, 0, 0, 0, 0},
+};
+
 /* ============================================================
  *  包注册表：所有包的汇总
  * ============================================================ */
@@ -193,8 +216,9 @@ static const Package_t g_packages[] = {
     {g_steps_pkg4, sizeof(g_steps_pkg4)/sizeof(PackStep_t), 1},  // UNLOAD_TRAY_1
     {g_steps_pkg6, sizeof(g_steps_pkg6)/sizeof(PackStep_t), 1},  // UNLOAD_TRAY_2
     {g_steps_pkg7, sizeof(g_steps_pkg7)/sizeof(PackStep_t), 1},  // UNLOAD_TRAY_3
+    {g_steps_pkg8, sizeof(g_steps_pkg8)/sizeof(PackStep_t), 1},  // LOAD_TRAY_2_FROM_PLACE
 };
-#define PACKAGE_COUNT   (sizeof(g_packages) / sizeof(g_packages[0]))  // = 6
+#define PACKAGE_COUNT   (sizeof(g_packages) / sizeof(g_packages[0]))  // = 7
 
 /* 托盘绝对位置别名：便于按角度语义做包内映射
  * TRAY_POS_1 (DEG_0)   = 一号托盘，绝对角度 120°

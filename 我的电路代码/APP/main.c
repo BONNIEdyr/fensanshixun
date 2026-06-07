@@ -330,6 +330,11 @@ int main(void)
 			{
 				Package_Start(LOAD_TRAY_3);
 			}
+			else if((joystick.btn2 & PS2_BTN_CIRCLE) && !(prevBtn2 & PS2_BTN_CIRCLE))
+			{
+				// 圆圈键：与 LOAD_TRAY_2 相同流程，但夹取时滑轨下降到物料放置位(零位)
+				Package_Start(LOAD_TRAY_2_FROM_PLACE);
+			}
 		}
 		else if((joystick.btn2 & PS2_BTN_L2) && !(joystick.btn2 & PS2_BTN_L1))
 		{
